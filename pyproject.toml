@@ -1,0 +1,76 @@
+[project]
+name = "sprenity"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "fastapi>=0.128.0",
+    "pydantic>=2.12.5",
+    "python-dotenv>=1.2.1",
+    "ursina>=8.3.0",
+    "uvicorn>=0.40.0",
+]
+
+[project.scripts]
+client = "sprenity.client.main:main"
+server = "sprenity.server.main:run"
+
+[dependency-groups]
+dev = [
+    "ruff>=0.14.14",
+    "pytest>=8.0.0",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/sprenity"]
+
+[tool.ruff]
+target-version = "py313"
+indent-width = 4
+exclude = [".venv"]
+
+[tool.ruff.lint]
+select = [
+    "E",     # Whitespace, indentation, and PEP8 style issues
+    "F",     # Undefined names, unused variables, dead code
+    "I",     # Isort
+    "UP",    # Modernizes syntax to match target Python version
+    "ASYNC", # Flags blocking calls and bad patterns in async code
+    "RUF",   # Ruff-specific correctness and style improvements
+    "B",     # Catches likely bugs and suspicious code
+    "N",     # Enforces naming conventions
+    "SIM",   # Suggests simpler control-flow patterns
+    "C4",    # Enforces efficient list/set/dict comprehensions
+    "ISC",   # Catches implicit string concatenation bugs
+    "LOG",   # Enforces correct logging format strings
+    "T10",   # Flags pdb/breakpoint left in code
+    "RET",   # Enforces consistent return statements
+    "RSE",   # Enforces proper raise statement usage
+    "Q",     # Enforces consistent quote style
+    "PYI",   # Type stub file (.pyi) linting
+    "PIE",   # Misc linting for Python idioms
+    "ICN",   # Enforces import naming conventions
+    "INT",   # Validates gettext internationalization calls
+    "TC",    # Moves type-only imports into TYPE_CHECKING blocks
+    "S",     # Detects common security issues
+]
+
+ignore = [
+    "UP045",  # Enforces `X | None` instead of `Optional[X]`
+    "UP007",  # Enforces `X | Y` instead of `Union[X, Y]`
+    "C401",   # Enforces set literals over set([...])
+    "C405",   # Enforces set literals over set()
+    "TC006",  # Enforces string type annotations in cast()
+    "S101",   # Flags use of assert
+]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+line-ending = "auto"
+skip-magic-trailing-comma = false
