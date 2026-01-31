@@ -2,7 +2,7 @@ import { useThree } from '@react-three/fiber';
 import { useEffect } from 'react';
 import * as THREE from 'three';
 import { SelectionBox } from 'three/examples/jsm/interactive/SelectionBox.js';
-import { useGameStore } from './store/gameStore';
+import { useGameStore } from './store/game-store';
 
 function findSelectableRoot(object: THREE.Object3D): THREE.Object3D | null {
   let current: THREE.Object3D | null = object;

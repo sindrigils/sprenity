@@ -2,8 +2,8 @@ import { useGLTF } from '@react-three/drei';
 import { useFrame } from '@react-three/fiber';
 import { useEffect, useMemo, useRef } from 'react';
 import * as THREE from 'three';
-import { useClonedModel } from './hooks/useClonedModel';
-import { useGameStore } from './store/gameStore';
+import { useClonedModel } from './hooks/use-cloned-model';
+import { useGameStore } from './store/game-store';
 
 interface RangerProps {
   id: string;

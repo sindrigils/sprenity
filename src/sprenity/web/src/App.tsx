@@ -2,9 +2,9 @@ import { OrbitControls } from '@react-three/drei';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { useMemo, useRef } from 'react';
 import * as THREE from 'three';
-import { BoxSelection } from './BoxSelection';
-import { Ranger } from './Ranger';
-import { useGameStore } from './store/gameStore';
+import { BoxSelection } from './box-selection';
+import { Ranger } from './ranger';
+import { useGameStore } from './store/game-store';
 
 const GRID_VERTEX_SHADER = `
 varying vec3 vWorldPosition;
