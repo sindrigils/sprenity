@@ -7,9 +7,10 @@ export function useClonedModel(
   id: string,
   position: [number, number, number]
 ) {
+  const [x, y, z] = position;
   return useMemo(() => {
     const clone = SkeletonUtils.clone(scene);
-    clone.position.set(...position);
+    clone.position.set(x, y, z);
     clone.userData.selectable = true;
     clone.userData.id = id;
 
@@ -21,5 +22,5 @@ export function useClonedModel(
     });
 
     return clone;
-  }, [scene, id, position]);
+  }, [scene, id, x, y, z]);
 }

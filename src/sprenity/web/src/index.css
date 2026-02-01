@@ -1,6 +1,8 @@
+@import "tailwindcss";
+@config "../tailwind.config.js";
+@source "../src/**/*.{js,ts,jsx,tsx}";
+
 * {
-  margin: 0;
-  padding: 0;
   box-sizing: border-box;
 }
 

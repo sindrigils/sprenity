@@ -1,10 +1,19 @@
 import * as THREE from 'three';
 import { create } from 'zustand';
 
-interface Agent {
+export type CharacterModel =
+  | 'Barbarian'
+  | 'Knight'
+  | 'Mage'
+  | 'Ranger'
+  | 'Rogue'
+  | 'Rogue_Hooded';
+
+export interface Agent {
   id: string;
   name: string;
   model: string;
+  characterModel: CharacterModel;
   object: THREE.Object3D;
   targetPosition: THREE.Vector3 | null;
 }
@@ -14,12 +23,17 @@ interface GameStore {
 
   selectedAgentId: Set<string>;
 
-  registerAgent: (id: string, object: THREE.Object3D) => void;
+  registerAgent: (id: string, name: string, characterModel: CharacterModel, object: THREE.Object3D) => void;
   unregisterAgent: (id: string) => void;
+  updateAgentObject: (id: string, object: THREE.Object3D) => void;
   setSelectedAgentId: (id: string) => void;
   clearSelectedAgentIds: () => void;
   moveSelectedAgentTo: (worldPosition: THREE.Vector3) => void;
   clearTargetPosition: (id: string) => void;
+  updateAgentConfig: (
+    id: string,
+    data: { name: string; model: string; characterModel: CharacterModel }
+  ) => void;
 }
 
 export const useGameStore = create<GameStore>((set, get) => ({
@@ -28,13 +42,14 @@ export const useGameStore = create<GameStore>((set, get) => ({
   selectedAgentId: new Set<string>(),
 
   // Actions
-  registerAgent: (id: string, object: THREE.Object3D) => {
+  registerAgent: (id: string, name: string, characterModel: CharacterModel, object: THREE.Object3D) => {
     set((state) => {
       const newMap = new Map(state.agentsMap);
       newMap.set(id, {
         id,
-        name: `Agent ${id}`,
+        name,
         model: '',
+        characterModel,
         object,
         targetPosition: null,
       });
@@ -49,6 +64,17 @@ export const useGameStore = create<GameStore>((set, get) => ({
       const newSet = new Set(state.selectedAgentId);
       newSet.delete(id);
       return { agentsMap: newMap, selectedAgentId: newSet };
+    });
+  },
+
+  updateAgentObject: (id: string, object: THREE.Object3D) => {
+    set((state) => {
+      const newMap = new Map(state.agentsMap);
+      const agent = newMap.get(id);
+      if (agent) {
+        newMap.set(id, { ...agent, object });
+      }
+      return { agentsMap: newMap };
     });
   },
 
@@ -144,6 +170,17 @@ export const useGameStore = create<GameStore>((set, get) => ({
       if (agent) {
         agent.targetPosition = null;
         newMap.set(id, agent);
+      }
+      return { agentsMap: newMap };
+    });
+  },
+
+  updateAgentConfig: (id: string, data: { name: string; model: string; characterModel: CharacterModel }) => {
+    set((state) => {
+      const newMap = new Map(state.agentsMap);
+      const agent = newMap.get(id);
+      if (agent) {
+        newMap.set(id, { ...agent, name: data.name, model: data.model, characterModel: data.characterModel });
       }
       return { agentsMap: newMap };
     });

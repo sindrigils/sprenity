@@ -1,10 +1,11 @@
 import { OrbitControls } from '@react-three/drei';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
-import { useMemo, useRef, type MutableRefObject } from 'react';
+import { useEffect, useMemo, useRef, type MutableRefObject } from 'react';
 import * as THREE from 'three';
 import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib';
+import { Agent } from './agent';
 import { BoxSelection } from './box-selection';
-import { Ranger } from './ranger';
+import { ModalProvider, useModal } from './modals/modal-provider';
 import { useGameStore } from './store/game-store';
 
 const GRID_VERTEX_SHADER = `
@@ -221,8 +222,39 @@ function ZoomClamp({
   return null;
 }
 
-export default function App() {
+function GameCanvas() {
   const controlsRef = useRef<OrbitControlsImpl | null>(null);
+  const { openModal } = useModal();
+
+  // Keyboard handler for "e" key to open configure modal
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Skip if typing in input/textarea
+      const target = e.target as HTMLElement;
+      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') {
+        return;
+      }
+
+      if (e.key === 'e' || e.key === 'E') {
+        const state = useGameStore.getState();
+        if (state.selectedAgentId.size > 0) {
+          const firstSelectedId = Array.from(state.selectedAgentId)[0];
+          const agent = state.agentsMap.get(firstSelectedId);
+          if (agent) {
+            openModal('configure-agent', {
+              agentId: agent.id,
+              name: agent.name,
+              model: agent.model || 'claude-sonnet',
+              characterModel: agent.characterModel,
+            });
+          }
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [openModal]);
 
   return (
     <Canvas
@@ -232,8 +264,18 @@ export default function App() {
       <color attach="background" args={['#2A2B38']} />
       <ambientLight intensity={0.5} />
       <directionalLight position={[5, 10, 5]} intensity={1} />
-      <Ranger id="ranger1" position={[-2, 0, 0]} />
-      <Ranger id="ranger2" position={[2, 0, 0]} />
+      <Agent
+        id="ranger1"
+        name="Ranger 1"
+        characterModel="Ranger"
+        position={[-2, 0, 0]}
+      />
+      <Agent
+        id="ranger2"
+        name="Ranger 2"
+        characterModel="Ranger"
+        position={[2, 0, 0]}
+      />
       <InfiniteGrid />
       <ClickableGround />
       <BoxSelection />
@@ -253,5 +295,15 @@ export default function App() {
         }}
       />
     </Canvas>
+  );
+}
+
+export default function App() {
+  const updateAgentConfig = useGameStore((state) => state.updateAgentConfig);
+
+  return (
+    <ModalProvider onSaveAgentConfig={updateAgentConfig}>
+      <GameCanvas />
+    </ModalProvider>
   );
 }
