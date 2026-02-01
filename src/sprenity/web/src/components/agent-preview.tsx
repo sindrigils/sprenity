@@ -7,7 +7,7 @@ import {
   useAnimations,
   useCharacterModel,
   type CharacterModel,
-} from '../hooks';
+} from '@hooks/index';
 
 type PreviewModelProps = {
   model: CharacterModel;

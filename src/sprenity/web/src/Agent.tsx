@@ -2,8 +2,8 @@ import { Html } from '@react-three/drei';
 import { useFrame } from '@react-three/fiber';
 import { useEffect, useRef } from 'react';
 import * as THREE from 'three';
-import { useAnimations, useCharacterModel, useClonedModel } from './hooks';
-import { type Agent, useGameStore } from './store/game-store';
+import { useAnimations, useCharacterModel, useClonedModel } from '@hooks/index';
+import { type Agent, useGameStore } from '@store/game-store';
 
 type AgentProps =
   | Pick<Agent, 'id' | 'name' | 'characterModel'> & {

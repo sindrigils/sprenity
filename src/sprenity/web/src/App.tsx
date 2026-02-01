@@ -5,8 +5,8 @@ import * as THREE from 'three';
 import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib';
 import { Agent } from './agent';
 import { BoxSelection } from './box-selection';
-import { ModalProvider, useModal } from './modals/modal-provider';
-import { useGameStore } from './store/game-store';
+import { ModalProvider, useModal } from '@modals/modal-provider';
+import { useGameStore } from '@store/game-store';
 
 const GRID_VERTEX_SHADER = `
 varying vec3 vWorldPosition;
