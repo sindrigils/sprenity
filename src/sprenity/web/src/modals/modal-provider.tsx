@@ -6,7 +6,7 @@ import {
   type ReactNode,
 } from 'react';
 import { ConfigureAgentModal } from './configure-agent';
-import type { CharacterModel } from '../store/game-store';
+import type { CharacterModel } from '../hooks';
 
 type ModalType = 'configure-agent';
 

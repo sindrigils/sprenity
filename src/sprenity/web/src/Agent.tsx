@@ -1,8 +1,8 @@
-import { Html, useGLTF } from '@react-three/drei';
+import { Html } from '@react-three/drei';
 import { useFrame } from '@react-three/fiber';
-import { useEffect, useMemo, useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import * as THREE from 'three';
-import { useClonedModel } from './hooks/use-cloned-model';
+import { useAnimations, useCharacterModel, useClonedModel } from './hooks';
 import { type Agent, useGameStore } from './store/game-store';
 
 type AgentProps =
@@ -40,7 +40,9 @@ export function Agent({
   const nameTagRef = useRef<THREE.Group>(null);
   const isSelected = useGameStore((state) => state.selectedAgentId.has(id));
   const agentName = useGameStore((state) => state.agentsMap.get(id)?.name);
-  const storeCharacterModel = useGameStore((state) => state.agentsMap.get(id)?.characterModel);
+  const storeCharacterModel = useGameStore(
+    (state) => state.agentsMap.get(id)?.characterModel
+  );
 
   const registerAgent = useGameStore((state) => state.registerAgent);
   const unregisterAgent = useGameStore((state) => state.unregisterAgent);
@@ -49,22 +51,10 @@ export function Agent({
   // Use store value if available, otherwise use initial prop
   const characterModel = storeCharacterModel ?? initialCharacterModel;
 
-  // Load the character model
-  const { scene } = useGLTF(`/assets/characters/${characterModel}.glb`);
+  // Load the character model and animations
+  const scene = useCharacterModel(characterModel);
   const clonedScene = useClonedModel(scene, id, position);
-
-  // Load animations
-  const { animations: movementAnims } = useGLTF(
-    '/assets/animations/Rig_Medium_MovementBasic.glb'
-  );
-  const { animations: generalAnims } = useGLTF(
-    '/assets/animations/Rig_Medium_General.glb'
-  );
-
-  const allAnimations = useMemo(
-    () => [...movementAnims, ...generalAnims],
-    [movementAnims, generalAnims]
-  );
+  const { getClip } = useAnimations();
 
   const targetPosition = useGameStore(
     (state) => state.agentsMap.get(id)?.targetPosition
@@ -74,8 +64,8 @@ export function Agent({
     const mixer = new THREE.AnimationMixer(clonedScene);
     mixerRef.current = mixer;
 
-    const idleClip = allAnimations.find((clip) => clip.name === 'Idle_A');
-    const runningClip = allAnimations.find((clip) => clip.name === 'Running_A');
+    const idleClip = getClip('Idle_A');
+    const runningClip = getClip('Running_A');
     if (targetPosition && runningClip) {
       const action = mixer.clipAction(runningClip);
       action.play();
@@ -83,7 +73,7 @@ export function Agent({
       const action = mixer.clipAction(idleClip);
       action.play();
     }
-  }, [clonedScene, allAnimations, targetPosition]);
+  }, [clonedScene, getClip, targetPosition]);
 
   // Register on mount, unregister on unmount
   useEffect(() => {

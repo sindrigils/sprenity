@@ -1,13 +1,6 @@
 import * as THREE from 'three';
 import { create } from 'zustand';
-
-export type CharacterModel =
-  | 'Barbarian'
-  | 'Knight'
-  | 'Mage'
-  | 'Ranger'
-  | 'Rogue'
-  | 'Rogue_Hooded';
+import type { CharacterModel } from '../hooks';
 
 export interface Agent {
   id: string;
@@ -23,7 +16,12 @@ interface GameStore {
 
   selectedAgentId: Set<string>;
 
-  registerAgent: (id: string, name: string, characterModel: CharacterModel, object: THREE.Object3D) => void;
+  registerAgent: (
+    id: string,
+    name: string,
+    characterModel: CharacterModel,
+    object: THREE.Object3D
+  ) => void;
   unregisterAgent: (id: string) => void;
   updateAgentObject: (id: string, object: THREE.Object3D) => void;
   setSelectedAgentId: (id: string) => void;
@@ -42,7 +40,12 @@ export const useGameStore = create<GameStore>((set, get) => ({
   selectedAgentId: new Set<string>(),
 
   // Actions
-  registerAgent: (id: string, name: string, characterModel: CharacterModel, object: THREE.Object3D) => {
+  registerAgent: (
+    id: string,
+    name: string,
+    characterModel: CharacterModel,
+    object: THREE.Object3D
+  ) => {
     set((state) => {
       const newMap = new Map(state.agentsMap);
       newMap.set(id, {
@@ -175,12 +178,20 @@ export const useGameStore = create<GameStore>((set, get) => ({
     });
   },
 
-  updateAgentConfig: (id: string, data: { name: string; model: string; characterModel: CharacterModel }) => {
+  updateAgentConfig: (
+    id: string,
+    data: { name: string; model: string; characterModel: CharacterModel }
+  ) => {
     set((state) => {
       const newMap = new Map(state.agentsMap);
       const agent = newMap.get(id);
       if (agent) {
-        newMap.set(id, { ...agent, name: data.name, model: data.model, characterModel: data.characterModel });
+        newMap.set(id, {
+          ...agent,
+          name: data.name,
+          model: data.model,
+          characterModel: data.characterModel,
+        });
       }
       return { agentsMap: newMap };
     });

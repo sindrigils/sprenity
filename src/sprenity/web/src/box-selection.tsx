@@ -35,7 +35,7 @@ export function BoxSelection() {
     let startY = 0;
 
     const onPointerDown = (event: PointerEvent) => {
-      if (event.button !== 0) return; // Only left click
+      if (event.button !== 0) return;
 
       isSelecting = true;
       startX = event.clientX;

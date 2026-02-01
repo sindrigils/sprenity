@@ -1,9 +1,13 @@
-import { OrbitControls, useGLTF } from '@react-three/drei';
+import { OrbitControls } from '@react-three/drei';
 import { Canvas, useFrame } from '@react-three/fiber';
 import { useEffect, useMemo, useRef } from 'react';
 import * as THREE from 'three';
 import * as SkeletonUtils from 'three/addons/utils/SkeletonUtils.js';
-import type { CharacterModel } from '../agent';
+import {
+  useAnimations,
+  useCharacterModel,
+  type CharacterModel,
+} from '../hooks';
 
 type PreviewModelProps = {
   model: CharacterModel;
@@ -12,21 +16,9 @@ type PreviewModelProps = {
 function PreviewModel({ model }: PreviewModelProps) {
   const mixerRef = useRef<THREE.AnimationMixer | null>(null);
 
-  // Load the character model
-  const { scene } = useGLTF(`/assets/characters/${model}.glb`);
-
-  // Load animations - need both files to get Idle_A
-  const { animations: movementAnims } = useGLTF(
-    '/assets/animations/Rig_Medium_MovementBasic.glb'
-  );
-  const { animations: generalAnims } = useGLTF(
-    '/assets/animations/Rig_Medium_General.glb'
-  );
-
-  const allAnimations = useMemo(
-    () => [...movementAnims, ...generalAnims],
-    [movementAnims, generalAnims]
-  );
+  // Load the character model and animations
+  const scene = useCharacterModel(model);
+  const { getClip } = useAnimations();
 
   // Clone the scene so we don't modify the cached original
   const clonedScene = useMemo(() => {
@@ -46,7 +38,7 @@ function PreviewModel({ model }: PreviewModelProps) {
     const mixer = new THREE.AnimationMixer(clonedScene);
     mixerRef.current = mixer;
 
-    const idleClip = allAnimations.find((clip) => clip.name === 'Idle_A');
+    const idleClip = getClip('Idle_A');
     let action: THREE.AnimationAction | undefined;
     if (idleClip) {
       action = mixer.clipAction(idleClip);
@@ -59,7 +51,7 @@ function PreviewModel({ model }: PreviewModelProps) {
       }
       mixer.stopAllAction();
     };
-  }, [clonedScene, allAnimations]);
+  }, [clonedScene, getClip]);
 
   useFrame((_, delta) => {
     mixerRef.current?.update(delta);
@@ -109,13 +101,3 @@ export function AgentPreview({ model = 'Ranger' }: AgentPreviewProps) {
     </Canvas>
   );
 }
-
-// Preload assets
-useGLTF.preload('/assets/characters/Barbarian.glb');
-useGLTF.preload('/assets/characters/Knight.glb');
-useGLTF.preload('/assets/characters/Mage.glb');
-useGLTF.preload('/assets/characters/Ranger.glb');
-useGLTF.preload('/assets/characters/Rogue.glb');
-useGLTF.preload('/assets/characters/Rogue_Hooded.glb');
-useGLTF.preload('/assets/animations/Rig_Medium_MovementBasic.glb');
-useGLTF.preload('/assets/animations/Rig_Medium_General.glb');
