@@ -1,6 +1,6 @@
 import { Suspense, useState } from 'react';
-import { AgentPreview } from '@components/agent-preview';
-import type { CharacterModel } from '@hooks/index';
+import { AgentPreview } from '@ui/previews/agent-preview';
+import type { CharacterModel } from '@core/hooks';
 
 interface ConfigureAgentModalProps {
   isOpen: boolean;

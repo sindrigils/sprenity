@@ -10,10 +10,10 @@ export default defineConfig({
   base: process.env.ELECTRON === 'true' ? './' : '/',
   resolve: {
     alias: {
-      '@store': path.resolve(__dirname, './src/store'),
-      '@modals': path.resolve(__dirname, './src/modals'),
-      '@hooks': path.resolve(__dirname, './src/hooks'),
-      '@components': path.resolve(__dirname, './src/components'),
+      '@core': path.resolve(__dirname, './src/core'),
+      '@entities': path.resolve(__dirname, './src/entities'),
+      '@systems': path.resolve(__dirname, './src/systems'),
+      '@ui': path.resolve(__dirname, './src/ui'),
     },
   },
 });
