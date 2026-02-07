@@ -2,6 +2,7 @@ import { useFrame, useThree } from '@react-three/fiber';
 import { useMemo, type MutableRefObject } from 'react';
 import * as THREE from 'three';
 import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib';
+import { useInteractionLocked } from '@core/store/interaction-store';
 
 type ZoomClampProps = {
   controlsRef: MutableRefObject<OrbitControlsImpl | null>;
@@ -14,12 +15,17 @@ export function ZoomClamp({
   baseMinZoom = 8,
   safety = 1.03,
 }: ZoomClampProps) {
+  const isLocked = useInteractionLocked();
   const size = useThree((state) => state.size);
   const right = useMemo(() => new THREE.Vector3(), []);
   const up = useMemo(() => new THREE.Vector3(), []);
   const forward = useMemo(() => new THREE.Vector3(), []);
 
   useFrame(() => {
+    if (isLocked) {
+      return;
+    }
+
     const controls = controlsRef.current;
     if (!controls) {
       return;

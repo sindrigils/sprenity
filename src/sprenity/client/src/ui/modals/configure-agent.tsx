@@ -1,6 +1,9 @@
-import { Suspense, useState } from 'react';
-import { AgentPreview } from '@ui/previews/agent-preview';
+import { Suspense, useEffect, useId, useMemo, useRef, useState } from 'react';
+import { useProgress } from '@react-three/drei';
+import * as THREE from 'three';
 import type { CharacterModel } from '@core/hooks';
+import { AgentPreviewScene } from '@ui/previews/agent-preview';
+import { useThreeViewRegistry } from '@ui/three-view-registry';
 
 interface ConfigureAgentModalProps {
   isOpen: boolean;
@@ -41,11 +44,66 @@ export function ConfigureAgentModal({
   const [name, setName] = useState(initialName);
   const [model, setModel] = useState(initialModel);
   const [characterModel, setCharacterModel] = useState<CharacterModel>(initialCharacterModel);
+  const previewRef = useRef<HTMLDivElement | null>(null);
+  const closingRef = useRef(false);
+  const { active: isLoadingPreview } = useProgress();
+  const viewId = useId();
+  const { registerView, updateView, unregisterView } = useThreeViewRegistry();
+  const previewCamera = useMemo(() => {
+    const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 100);
+    camera.position.set(0, 1, 4.5);
+    camera.lookAt(0, 0.9, 0);
+    return camera;
+  }, []);
+  const previewElement = useMemo(
+    () => (
+      <Suspense fallback={null}>
+        <AgentPreviewScene model={characterModel} camera={previewCamera} />
+      </Suspense>
+    ),
+    [characterModel, previewCamera]
+  );
+  const previewElementRef = useRef(previewElement);
+  previewElementRef.current = previewElement;
+
+  useEffect(() => {
+    registerView({
+      id: viewId,
+      track: previewRef,
+      element: previewElementRef.current,
+      priority: 2,
+      camera: previewCamera,
+    });
+    return () => unregisterView(viewId);
+  }, [registerView, unregisterView, viewId, previewCamera]);
+
+  useEffect(() => {
+    updateView(viewId, {
+      track: previewRef,
+      element: previewElement,
+      priority: 2,
+      camera: previewCamera,
+    });
+  }, [updateView, viewId, previewElement, previewCamera]);
 
   if (!isOpen) return null;
 
+  const queueClose = (finalize: () => void) => {
+    if (closingRef.current) return;
+    closingRef.current = true;
+    updateView(viewId, { visible: false });
+    requestAnimationFrame(() => {
+      unregisterView(viewId);
+      finalize();
+    });
+  };
+
+  const handleClose = () => {
+    queueClose(onClose);
+  };
+
   const handleSave = () => {
-    onSave({ name, model, characterModel });
+    queueClose(() => onSave({ name, model, characterModel }));
   };
 
   return (
@@ -54,11 +112,11 @@ export function ConfigureAgentModal({
       <div
         className="absolute inset-0"
         style={{ backgroundColor: 'rgba(0, 0, 0, 0.6)' }}
-        onClick={onClose}
+        onClick={handleClose}
       />
 
       {/* Modal Container */}
-      <div className="relative z-10 w-[90vw] max-w-[1400px] bg-[#171823] rounded-2xl shadow-2xl flex flex-col h-[85vh] max-h-[900px] min-h-[500px] border border-[#2a2b3d] overflow-hidden">
+      <div className="relative z-10 w-[90vw] max-w-[1400px] bg-transparent rounded-2xl shadow-2xl flex flex-col h-[85vh] max-h-[900px] min-h-[500px] border border-[#2a2b3d] overflow-hidden">
         {/* Header with tabs and close button */}
         <div className="flex items-center px-0 py-1.5 bg-[#151620]">
           <div className="flex items-center flex-1">
@@ -78,7 +136,7 @@ export function ConfigureAgentModal({
           </div>
         </div>
         <button
-          onClick={onClose}
+          onClick={handleClose}
           className="absolute right-4 top-3 p-2 text-gray-400 hover:text-white transition-colors bg-transparent border-none cursor-pointer"
           aria-label="Close"
         >
@@ -99,16 +157,13 @@ export function ConfigureAgentModal({
         {/* Body with 30/70 split */}
         <div className="flex flex-1 overflow-hidden">
           {/* Left Panel - Agent Preview (35%) */}
-          <div className="w-[35%] bg-[#141521] border-r border-[#2d2e3d]">
-            <Suspense
-              fallback={
-                <div className="w-full h-full flex items-center justify-center text-gray-500 text-sm">
-                  Loading preview...
-                </div>
-              }
-            >
-              <AgentPreview model={characterModel} />
-            </Suspense>
+          <div className="relative w-[35%] border-r border-[#2d2e3d]">
+            <div ref={previewRef} className="h-full w-full" />
+            {isLoadingPreview && (
+              <div className="pointer-events-none absolute inset-0 flex items-center justify-center text-gray-500 text-sm">
+                Loading preview...
+              </div>
+            )}
           </div>
 
           {/* Right Panel - Form Content (70%) */}

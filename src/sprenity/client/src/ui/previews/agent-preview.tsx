@@ -1,13 +1,13 @@
-import { OrbitControls } from '@react-three/drei';
-import { Canvas, useFrame } from '@react-three/fiber';
-import { useEffect, useMemo, useRef } from 'react';
-import * as THREE from 'three';
-import * as SkeletonUtils from 'three/addons/utils/SkeletonUtils.js';
 import {
   useAnimations,
   useCharacterModel,
   type CharacterModel,
 } from '@core/hooks';
+import { OrbitControls, PerspectiveCamera } from '@react-three/drei';
+import { useFrame } from '@react-three/fiber';
+import { useEffect, useMemo, useRef } from 'react';
+import * as THREE from 'three';
+import * as SkeletonUtils from 'three/addons/utils/SkeletonUtils.js';
 
 type PreviewModelProps = {
   model: CharacterModel;
@@ -71,25 +71,31 @@ function Ground() {
 
 type AgentPreviewProps = {
   model?: CharacterModel;
+  camera?: THREE.PerspectiveCamera;
 };
 
-export function AgentPreview({ model = 'Ranger' }: AgentPreviewProps) {
+export function AgentPreviewScene({ model = 'Ranger', camera }: AgentPreviewProps) {
+  useEffect(() => {
+    if (!camera) return;
+    camera.position.set(0, 1, 4.5);
+    camera.lookAt(0, 0.9, 0);
+    camera.updateProjectionMatrix();
+  }, [camera]);
+
   return (
-    <Canvas
-      camera={{
-        position: [0, 1, 4.5],
-        fov: 45,
-      }}
-      style={{ background: '#0a0a0c' }}
-    >
-      <fog attach="fog" args={['#0a0a0c', 3, 12]} />
-      <ambientLight intensity={0.5} />
-      <directionalLight position={[5, 10, 5]} intensity={1} />
+    <>
+      <color attach="background" args={['#0a0a0c']} />
+      {/* <fog attach="fog" args={['#0a0a0c', 5, 12]} /> */}
+      {!camera && <PerspectiveCamera makeDefault position={[0, 1, 4.5]} fov={45} />}
+      <ambientLight intensity={1} />
+      <directionalLight position={[5, 10, 5]} intensity={1.5} />
+      <directionalLight position={[-3, 5, -3]} intensity={0.5} />
 
       <PreviewModel model={model} />
       <Ground />
 
       <OrbitControls
+        camera={camera}
         target={[0, 0.9, 0]}
         enablePan={false}
         enableZoom={false}
@@ -98,6 +104,6 @@ export function AgentPreview({ model = 'Ranger' }: AgentPreviewProps) {
         enableDamping={true}
         dampingFactor={0.05}
       />
-    </Canvas>
+    </>
   );
 }

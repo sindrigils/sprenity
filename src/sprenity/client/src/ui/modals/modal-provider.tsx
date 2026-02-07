@@ -4,26 +4,31 @@ import {
   useContext,
   useState,
   type ReactNode,
+  useEffect,
 } from 'react';
 import { ConfigureAgentModal } from './configure-agent';
 import type { CharacterModel } from '@core/hooks';
+import { useInteractionStore } from '@core/store/interaction-store';
 
-type ModalType = 'configure-agent';
+export type ModalType = 'configure-agent';
 
-interface ConfigureAgentData {
+export interface ConfigureAgentData {
   agentId: string;
   name: string;
   model: string;
   characterModel: CharacterModel;
 }
 
-type ModalData = {
+export type ModalData = {
   'configure-agent': ConfigureAgentData;
 };
 
 interface ModalContextValue {
   openModal: <T extends ModalType>(type: T, data: ModalData[T]) => void;
   closeModal: () => void;
+  isModalOpen: boolean;
+  activeModal: ModalType | null;
+  modalData: ModalData[ModalType] | null;
 }
 
 const ModalContext = createContext<ModalContextValue | null>(null);
@@ -49,6 +54,7 @@ export function ModalProvider({
   children,
   onSaveAgentConfig,
 }: ModalProviderProps) {
+  const setLocked = useInteractionStore((state) => state.setLocked);
   const [activeModal, setActiveModal] = useState<ModalType | null>(null);
   const [modalData, setModalData] = useState<ModalData[ModalType] | null>(null);
 
@@ -65,8 +71,22 @@ export function ModalProvider({
     setModalData(null);
   }, []);
 
+  const isModalOpen = activeModal !== null;
+
+  useEffect(() => {
+    setLocked(isModalOpen);
+  }, [isModalOpen, setLocked]);
+
   return (
-    <ModalContext.Provider value={{ openModal, closeModal }}>
+    <ModalContext.Provider
+      value={{
+        openModal,
+        closeModal,
+        isModalOpen,
+        activeModal,
+        modalData,
+      }}
+    >
       {children}
       {activeModal === 'configure-agent' && modalData && (
         <ConfigureAgentModal

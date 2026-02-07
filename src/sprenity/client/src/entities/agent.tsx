@@ -39,7 +39,8 @@ export function Agent({
   const mixerRef = useRef<THREE.AnimationMixer | null>(null);
   const nameTagRef = useRef<THREE.Group>(null);
   const isSelected = useGameStore((state) => state.selectedAgentId.has(id));
-  const agentName = useGameStore((state) => state.agentsMap.get(id)?.name);
+  const agentName =
+    useGameStore((state) => state.agentsMap.get(id)?.name) ?? name;
   const storeCharacterModel = useGameStore(
     (state) => state.agentsMap.get(id)?.characterModel
   );
@@ -141,7 +142,7 @@ export function Agent({
           position={[0, 2.5, 0]}
           center
           sprite
-          zIndexRange={[0, 10]}
+          zIndexRange={[40, 0]}
           style={{ pointerEvents: 'none' }}
         >
           <div

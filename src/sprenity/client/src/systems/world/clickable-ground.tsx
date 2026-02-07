@@ -1,6 +1,8 @@
 import { useGameStore } from '@core/store/game-store';
+import { useInteractionLocked } from '@core/store/interaction-store';
 
 export function ClickableGround() {
+  const isLocked = useInteractionLocked();
   const selectedAgentId = useGameStore((state) => state.selectedAgentId);
   const moveSelectedAgentTo = useGameStore(
     (state) => state.moveSelectedAgentTo
@@ -8,6 +10,8 @@ export function ClickableGround() {
   const clearSelectedAgentIds = useGameStore(
     (state) => state.clearSelectedAgentIds
   );
+
+  if (isLocked) return null;
 
   return (
     <mesh

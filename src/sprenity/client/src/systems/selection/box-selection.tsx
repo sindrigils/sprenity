@@ -1,8 +1,9 @@
+import { useGameStore } from '@core/store/game-store';
+import { useInteractionLocked } from '@core/store/interaction-store';
 import { useThree } from '@react-three/fiber';
-import { useEffect } from 'react';
+import { useEffect, type RefObject } from 'react';
 import * as THREE from 'three';
 import { SelectionBox } from 'three/examples/jsm/interactive/SelectionBox.js';
-import { useGameStore } from '@core/store/game-store';
 
 function findSelectableRoot(object: THREE.Object3D): THREE.Object3D | null {
   let current: THREE.Object3D | null = object;
@@ -13,11 +14,32 @@ function findSelectableRoot(object: THREE.Object3D): THREE.Object3D | null {
   return null;
 }
 
-export function BoxSelection() {
+type BoxSelectionProps = {
+  zIndex?: number;
+  boundsRef?: RefObject<HTMLElement>;
+};
+
+export function BoxSelection({ zIndex = 20, boundsRef }: BoxSelectionProps) {
   const { camera, gl, scene } = useThree();
+  const isLocked = useInteractionLocked();
 
   useEffect(() => {
+    if (isLocked) return;
+
     const selectionBox = new SelectionBox(camera, scene);
+    const raycaster = new THREE.Raycaster();
+    const groundPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+    const intersection = new THREE.Vector3();
+    const isWithinBounds = (event: PointerEvent) => {
+      if (!boundsRef?.current) return true;
+      const rect = boundsRef.current.getBoundingClientRect();
+      return (
+        event.clientX >= rect.left &&
+        event.clientX <= rect.right &&
+        event.clientY >= rect.top &&
+        event.clientY <= rect.bottom
+      );
+    };
 
     // Create our own selection visual (instead of SelectionHelper which doesn't filter by button)
     const boxElement = document.createElement('div');
@@ -27,6 +49,7 @@ export function BoxSelection() {
       position: fixed;
       pointer-events: none;
       display: none;
+      z-index: ${zIndex};
     `;
     document.body.appendChild(boxElement);
 
@@ -36,6 +59,7 @@ export function BoxSelection() {
 
     const onPointerDown = (event: PointerEvent) => {
       if (event.button !== 0) return;
+      if (!isWithinBounds(event)) return;
 
       isSelecting = true;
       startX = event.clientX;
@@ -47,7 +71,9 @@ export function BoxSelection() {
       boxElement.style.height = '0px';
       boxElement.style.display = 'block';
 
-      const rect = gl.domElement.getBoundingClientRect();
+      const rect =
+        boundsRef?.current?.getBoundingClientRect() ??
+        gl.domElement.getBoundingClientRect();
       selectionBox.startPoint.set(
         ((event.clientX - rect.left) / rect.width) * 2 - 1,
         -((event.clientY - rect.top) / rect.height) * 2 + 1,
@@ -79,9 +105,28 @@ export function BoxSelection() {
         event.clientX - startX,
         event.clientY - startY
       );
-      if (dragDistance < 5) return;
+      if (dragDistance < 5) {
+        const rect =
+          boundsRef?.current?.getBoundingClientRect() ??
+          gl.domElement.getBoundingClientRect();
+        const ndc = new THREE.Vector2(
+          ((event.clientX - rect.left) / rect.width) * 2 - 1,
+          -((event.clientY - rect.top) / rect.height) * 2 + 1
+        );
+        raycaster.setFromCamera(ndc, camera);
+        if (raycaster.ray.intersectPlane(groundPlane, intersection)) {
+          const state = useGameStore.getState();
+          if (state.selectedAgentId.size > 0) {
+            state.moveSelectedAgentTo(intersection);
+            state.clearSelectedAgentIds();
+          }
+        }
+        return;
+      }
 
-      const rect = gl.domElement.getBoundingClientRect();
+      const rect =
+        boundsRef?.current?.getBoundingClientRect() ??
+        gl.domElement.getBoundingClientRect();
       selectionBox.endPoint.set(
         ((event.clientX - rect.left) / rect.width) * 2 - 1,
         -((event.clientY - rect.top) / rect.height) * 2 + 1,
@@ -105,17 +150,17 @@ export function BoxSelection() {
       });
     };
 
-    gl.domElement.addEventListener('pointerdown', onPointerDown);
+    document.addEventListener('pointerdown', onPointerDown);
     document.addEventListener('pointermove', onPointerMove);
     document.addEventListener('pointerup', onPointerUp);
 
     return () => {
-      gl.domElement.removeEventListener('pointerdown', onPointerDown);
+      document.removeEventListener('pointerdown', onPointerDown);
       document.removeEventListener('pointermove', onPointerMove);
       document.removeEventListener('pointerup', onPointerUp);
       boxElement.remove();
     };
-  }, [camera, gl, scene]);
+  }, [camera, gl, scene, isLocked, zIndex, boundsRef]);
 
   return null;
 }
