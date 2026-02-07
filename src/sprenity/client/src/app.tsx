@@ -1,14 +1,28 @@
 import { OrbitControls, View } from '@react-three/drei';
 import { Canvas, useThree } from '@react-three/fiber';
-import { useEffect, useRef, useState, type MutableRefObject, type RefObject } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type MutableRefObject,
+  type RefObject,
+} from 'react';
 import * as THREE from 'three';
 import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib';
 
 import { useGameStore } from '@core/store/game-store';
+import {
+  setRequiredAgentsForTests,
+  setSceneCameraForTests,
+  setTrackElementForTests,
+} from './e2e/test-api';
 import { Agent } from '@entities/agent';
 import { BoxSelection } from '@systems/selection/box-selection';
+import { Zones } from '@systems/zones';
 import { ClickableGround, InfiniteGrid, ZoomClamp } from '@systems/world';
 import { useInteractionLocked } from '@core/store/interaction-store';
+import { ModeToggle, ZoneBuildNotification } from '@ui/controls';
 import { ModalProvider, useModal } from '@ui/modals';
 import {
   ThreeViewRegistryProvider,
@@ -17,7 +31,7 @@ import {
 
 type GameCanvasProps = {
   eventSource: HTMLDivElement | null;
-  gameTrackRef: RefObject<HTMLDivElement>;
+  gameTrackRef: RefObject<HTMLDivElement | null>;
 };
 
 function GameCanvas({ eventSource, gameTrackRef }: GameCanvasProps) {
@@ -59,6 +73,7 @@ function GameCanvas({ eventSource, gameTrackRef }: GameCanvasProps) {
 
   return (
     <Canvas
+      data-testid="game-canvas"
       orthographic
       camera={{ zoom: 64, position: [20, 20, 20], near: 0.1, far: 5000 }}
       eventSource={eventSource ?? undefined}
@@ -75,15 +90,21 @@ function GameCanvas({ eventSource, gameTrackRef }: GameCanvasProps) {
 
 type GameSceneProps = {
   controlsRef: MutableRefObject<OrbitControlsImpl | null>;
-  gameTrackRef: RefObject<HTMLDivElement>;
+  gameTrackRef: RefObject<HTMLDivElement | null>;
 };
 
 function GameScene({ controlsRef, gameTrackRef }: GameSceneProps) {
+  const camera = useThree((state) => state.camera);
   const eventsConnected = useThree((state) => state.events.connected);
   const isLocked = useInteractionLocked();
 
+  useEffect(() => {
+    setSceneCameraForTests(camera);
+    return () => setSceneCameraForTests(null);
+  }, [camera]);
+
   return (
-    <View track={gameTrackRef}>
+    <View track={gameTrackRef as RefObject<HTMLElement>}>
       <color attach="background" args={['#2A2B38']} />
       <ambientLight intensity={0.5} />
       <directionalLight position={[5, 10, 5]} intensity={1} />
@@ -100,6 +121,7 @@ function GameScene({ controlsRef, gameTrackRef }: GameSceneProps) {
         position={[2, 0, 0]}
       />
       <InfiniteGrid />
+      <Zones boundsRef={gameTrackRef} />
       <ClickableGround />
       <BoxSelection boundsRef={gameTrackRef} />
       <ZoomClamp controlsRef={controlsRef} />
@@ -125,17 +147,41 @@ function GameScene({ controlsRef, gameTrackRef }: GameSceneProps) {
 
 export default function App() {
   const updateAgentConfig = useGameStore((state) => state.updateAgentConfig);
+  const updateZone = useGameStore((state) => state.updateZone);
+  const deleteZone = useGameStore((state) => state.deleteZone);
   const [eventSource, setEventSource] = useState<HTMLDivElement | null>(null);
   const gameTrackRef = useRef<HTMLDivElement>(null);
+  const setGameTrackRef = useCallback((element: HTMLDivElement | null) => {
+    gameTrackRef.current = element;
+    setTrackElementForTests(element);
+  }, []);
+
+  useEffect(() => {
+    setRequiredAgentsForTests(['ranger1', 'ranger2']);
+  }, []);
 
   return (
-    <div ref={setEventSource} className="relative h-full w-full">
+    <div
+      ref={setEventSource}
+      data-testid="app-root"
+      className="relative h-full w-full"
+    >
       <ThreeViewRegistryProvider>
-        <ModalProvider onSaveAgentConfig={updateAgentConfig}>
+        <ModalProvider
+          onSaveAgentConfig={updateAgentConfig}
+          onSaveZoneProject={updateZone}
+          onDeleteZoneProject={deleteZone}
+        >
           <GameCanvas eventSource={eventSource} gameTrackRef={gameTrackRef} />
         </ModalProvider>
       </ThreeViewRegistryProvider>
-      <div ref={gameTrackRef} className="absolute inset-0 z-10" />
+      <div
+        ref={setGameTrackRef}
+        data-testid="game-track"
+        className="absolute inset-0 z-10"
+      />
+      <ZoneBuildNotification />
+      <ModeToggle />
     </div>
   );
 }

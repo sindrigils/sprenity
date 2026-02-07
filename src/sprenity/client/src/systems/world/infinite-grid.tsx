@@ -39,7 +39,7 @@ export function InfiniteGrid() {
     () => ({
       uGroundColor: { value: new THREE.Color('#2A2B38') },
       uLineColor: { value: new THREE.Color('#56565c') },
-      uCellSize: { value: 2 },
+      uCellSize: { value: 1 },
       uLineWidth: { value: 1 },
     }),
     []

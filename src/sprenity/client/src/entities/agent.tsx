@@ -10,26 +10,6 @@ type AgentProps =
       position: [number, number, number];
     };
 
-const applyEmissiveGlow = (object: THREE.Object3D, isEnabled: boolean) => {
-  if (isEnabled) {
-    object.traverse((child) => {
-      if (child instanceof THREE.Mesh && child.material) {
-        const mat = child.material as THREE.MeshStandardMaterial;
-        mat.emissive = new THREE.Color(0x00ff88); // green-cyan
-        mat.emissiveIntensity = 0.6;
-      }
-    });
-  } else {
-    object.traverse((child) => {
-      if (child instanceof THREE.Mesh && child.material) {
-        const mat = child.material as THREE.MeshStandardMaterial;
-        mat.emissive = new THREE.Color(0x000000);
-        mat.emissiveIntensity = 0;
-      }
-    });
-  }
-};
-
 export function Agent({
   id,
   name,
@@ -88,10 +68,6 @@ export function Agent({
     updateAgentObject(id, clonedScene);
   }, [id, clonedScene, updateAgentObject]);
 
-  useEffect(() => {
-    applyEmissiveGlow(clonedScene, isSelected);
-  }, [clonedScene, isSelected]);
-
   useFrame((_, delta) => {
     mixerRef.current?.update(delta);
     if (targetPosition) {
@@ -138,8 +114,20 @@ export function Agent({
     <>
       <primitive object={clonedScene} />
       <group ref={nameTagRef} position={position}>
+        {isSelected ? (
+          <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.02, 0]}>
+            <ringGeometry args={[0.45, 0.62, 48]} />
+            <meshBasicMaterial
+              color="#00ff88"
+              transparent
+              opacity={0.95}
+              toneMapped={false}
+              depthWrite={false}
+            />
+          </mesh>
+        ) : null}
         <Html
-          position={[0, 2.5, 0]}
+          position={[0, 3.1, 0]}
           center
           sprite
           zIndexRange={[40, 0]}
@@ -147,7 +135,7 @@ export function Agent({
         >
           <div
             style={{
-              color: '#365E23',
+              color: '#7BEA52',
               fontSize: '14px',
               fontWeight: 'bold',
               whiteSpace: 'nowrap',

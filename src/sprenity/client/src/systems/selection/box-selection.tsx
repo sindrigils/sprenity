@@ -1,9 +1,15 @@
 import { useGameStore } from '@core/store/game-store';
-import { useInteractionLocked } from '@core/store/interaction-store';
+import {
+  useInteractionLocked,
+  useInteractionStore,
+} from '@core/store/interaction-store';
 import { useThree } from '@react-three/fiber';
 import { useEffect, type RefObject } from 'react';
 import * as THREE from 'three';
 import { SelectionBox } from 'three/examples/jsm/interactive/SelectionBox.js';
+
+const BOX_SELECTION_DRAG_THRESHOLD_PX = 5;
+const BOX_SELECTION_CLICK_SUPPRESS_MS = 150;
 
 function findSelectableRoot(object: THREE.Object3D): THREE.Object3D | null {
   let current: THREE.Object3D | null = object;
@@ -16,15 +22,16 @@ function findSelectableRoot(object: THREE.Object3D): THREE.Object3D | null {
 
 type BoxSelectionProps = {
   zIndex?: number;
-  boundsRef?: RefObject<HTMLElement>;
+  boundsRef?: RefObject<HTMLElement | null>;
 };
 
 export function BoxSelection({ zIndex = 20, boundsRef }: BoxSelectionProps) {
   const { camera, gl, scene } = useThree();
   const isLocked = useInteractionLocked();
+  const interactionMode = useGameStore((state) => state.interactionMode);
 
   useEffect(() => {
-    if (isLocked) return;
+    if (isLocked || interactionMode !== 'normal') return;
 
     const selectionBox = new SelectionBox(camera, scene);
     const raycaster = new THREE.Raycaster();
@@ -105,7 +112,7 @@ export function BoxSelection({ zIndex = 20, boundsRef }: BoxSelectionProps) {
         event.clientX - startX,
         event.clientY - startY
       );
-      if (dragDistance < 5) {
+      if (dragDistance < BOX_SELECTION_DRAG_THRESHOLD_PX) {
         const rect =
           boundsRef?.current?.getBoundingClientRect() ??
           gl.domElement.getBoundingClientRect();
@@ -123,6 +130,10 @@ export function BoxSelection({ zIndex = 20, boundsRef }: BoxSelectionProps) {
         }
         return;
       }
+
+      useInteractionStore
+        .getState()
+        .suppressGroundClickFor(BOX_SELECTION_CLICK_SUPPRESS_MS);
 
       const rect =
         boundsRef?.current?.getBoundingClientRect() ??
@@ -160,7 +171,7 @@ export function BoxSelection({ zIndex = 20, boundsRef }: BoxSelectionProps) {
       document.removeEventListener('pointerup', onPointerUp);
       boxElement.remove();
     };
-  }, [camera, gl, scene, isLocked, zIndex, boundsRef]);
+  }, [camera, gl, scene, isLocked, interactionMode, zIndex, boundsRef]);
 
   return null;
 }
