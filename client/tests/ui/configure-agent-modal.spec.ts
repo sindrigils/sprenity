@@ -39,8 +39,26 @@ test('configure modal opens with selected agent data and persists saved values @
   await nameInput.fill('Ranger Prime');
   await modelSelect.selectOption('claude-haiku');
   await characterSelect.selectOption('Knight');
+  const updateAgentResponsePromise = page.waitForResponse(
+    (response) =>
+      response.request().method() === 'PATCH' &&
+      response.url().endsWith('/api/agents/ranger1') &&
+      response.status() === 200
+  );
+  const refreshAgentsResponsePromise = page.waitForResponse(
+    (response) =>
+      response.request().method() === 'GET' &&
+      response.url().endsWith('/api/agents') &&
+      response.status() === 200
+  );
 
   await page.getByTestId('configure-agent-save').click();
+  const updateAgentResponse = await updateAgentResponsePromise;
+  const updatedAgent = await updateAgentResponse.json();
+  expect(updatedAgent.name).toBe('Ranger Prime');
+  expect(updatedAgent.model).toBe('claude-haiku');
+  expect(updatedAgent.characterModel).toBe('Knight');
+  await refreshAgentsResponsePromise;
   await expect(modal).toBeHidden();
 
   await page.keyboard.press('e');

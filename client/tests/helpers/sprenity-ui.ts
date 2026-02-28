@@ -31,7 +31,21 @@ const ensureTestApiAvailable = async (page: Page) => {
     .toBe(true);
 };
 
+const bootstrapE2EState = async (page: Page) => {
+  const bootstrapUrl = process.env.SPRENITY_E2E_BOOTSTRAP_URL;
+  if (!bootstrapUrl) return;
+
+  const response = await page.request.post(bootstrapUrl);
+  if (!response.ok()) {
+    const body = await response.text();
+    throw new Error(
+      `Failed to bootstrap e2e state (${response.status()}): ${body}`
+    );
+  }
+};
+
 export const gotoGame = async (page: Page) => {
+  await bootstrapE2EState(page);
   await page.goto('/?e2e=1');
   await ensureTestApiAvailable(page);
 };

@@ -44,7 +44,7 @@ uv run python -m uvicorn app.main:app --reload
 
 ```bash
 npm run verify:local        # typecheck + lint + smoke tests
-npm run test:ui             # full E2E tests
+npm run test:ui             # full E2E tests (bootstraps isolated test DB)
 npm run test:ui:smoke       # quick smoke tests
 ```
 
