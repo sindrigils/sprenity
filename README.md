@@ -11,21 +11,21 @@ A visual management interface for orchestrating multiple Claude Code instances. 
 ## Architecture
 
 ```
-src/sprenity/
+.
 ├── client/    # Electron + React + Three.js frontend (TypeScript)
-└── server/    # FastAPI backend (Python)
+└── server/    # FastAPI backend (Python package)
 ```
 
 **Frontend**: React 19, Three.js via react-three-fiber, Zustand for state, Tailwind CSS, Electron for desktop, Playwright for E2E tests.
 
-**Backend**: FastAPI, Pydantic, managed with uv. Handles agent lifecycle, zone persistence, and tmux session management.
+**Backend**: FastAPI + SQLAlchemy + Alembic, managed with uv. Handles agent lifecycle, zone persistence, and tmux session management.
 
 ## Getting Started
 
 ### Frontend
 
 ```bash
-cd src/sprenity/client
+cd client
 npm install
 npm run dev
 ```
@@ -33,9 +33,9 @@ npm run dev
 ### Backend
 
 ```bash
-cd src/sprenity/server
+cd server
 uv sync
-uv run fastapi dev main.py
+uv run python -m uvicorn app.main:app --reload
 ```
 
 ## Development

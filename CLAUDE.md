@@ -4,9 +4,10 @@
 
 Never run the game yourself. The user will always run it manually and report back what happens.
 
-## Backend (src/sprenity/server/)
+## Backend (server/)
 
-- Uses **uv** as the package manager — all commands should be prefixed with `uv run`
+- Uses **uv** as the package manager.
+- Canonical local run command: `uv run python -m uvicorn app.main:app --reload`
 - **Linting & Formatting**: Ruff
   - Lint: `uv run ruff check .`
   - Format: `uv run ruff format .`
