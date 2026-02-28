@@ -1,15 +1,19 @@
-import { Suspense, useEffect, useId, useMemo, useRef, useState } from 'react';
-import { useProgress } from '@react-three/drei';
-import * as THREE from 'three';
 import type { CharacterModel } from '@core/hooks';
+import { useProgress } from '@react-three/drei';
 import { IconChevronDown, IconClose } from '@ui/icons';
 import { AgentPreviewScene } from '@ui/previews/agent-preview';
-import { useThreeViewRegistry } from '@ui/three-view-registry';
+import { useThreeViewRegistry } from '@ui/three-view-registry-context';
+import { Suspense, useEffect, useId, useMemo, useRef, useState } from 'react';
+import * as THREE from 'three';
 
 interface ConfigureAgentModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (data: { name: string; model: string; characterModel: CharacterModel }) => void;
+  onSave: (data: {
+    name: string;
+    model: string;
+    characterModel: CharacterModel;
+  }) => void;
   initialName?: string;
   initialModel?: string;
   initialCharacterModel?: CharacterModel;
@@ -44,7 +48,9 @@ export function ConfigureAgentModal({
   const [activeTab, setActiveTab] = useState<Tab>('General');
   const [name, setName] = useState(initialName);
   const [model, setModel] = useState(initialModel);
-  const [characterModel, setCharacterModel] = useState<CharacterModel>(initialCharacterModel);
+  const [characterModel, setCharacterModel] = useState<CharacterModel>(
+    initialCharacterModel,
+  );
   const previewRef = useRef<HTMLDivElement | null>(null);
   const closingRef = useRef(false);
   const { active: isLoadingPreview } = useProgress();
@@ -62,10 +68,9 @@ export function ConfigureAgentModal({
         <AgentPreviewScene model={characterModel} camera={previewCamera} />
       </Suspense>
     ),
-    [characterModel, previewCamera]
+    [characterModel, previewCamera],
   );
   const previewElementRef = useRef(previewElement);
-  previewElementRef.current = previewElement;
 
   useEffect(() => {
     registerView({
@@ -113,10 +118,7 @@ export function ConfigureAgentModal({
       className="fixed inset-0 z-50 flex items-center justify-center"
     >
       {/* Overlay */}
-      <div
-        className="absolute inset-0 bg-transparent"
-        onClick={handleClose}
-      />
+      <div className="absolute inset-0 bg-transparent" onClick={handleClose} />
 
       {/* Modal Container */}
       <div className="relative z-10 w-[90vw] max-w-[1400px] bg-transparent rounded-2xl shadow-2xl flex flex-col h-[85vh] max-h-[900px] min-h-[500px] border border-[#2a2b3d] overflow-hidden">
@@ -212,7 +214,9 @@ export function ConfigureAgentModal({
                     <div className="relative">
                       <select
                         value={characterModel}
-                        onChange={(e) => setCharacterModel(e.target.value as CharacterModel)}
+                        onChange={(e) =>
+                          setCharacterModel(e.target.value as CharacterModel)
+                        }
                         data-testid="configure-agent-character-select"
                         className="w-full px-4 py-3 pr-10 bg-[#1c1d2b] border border-[#2a2b3d] rounded-lg text-white focus:outline-none focus:border-green-400 focus:ring-2 focus:ring-green-400/30 cursor-pointer appearance-none"
                       >

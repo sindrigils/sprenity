@@ -1,7 +1,11 @@
 import {
-  createContext,
+  createPortal,
+  useFrame,
+  useThree,
+  type RootState,
+} from '@react-three/fiber';
+import {
   useCallback,
-  useContext,
   useEffect,
   useLayoutEffect,
   useMemo,
@@ -12,38 +16,12 @@ import {
   type ReactNode,
   type RefObject,
 } from 'react';
-import { createPortal, useFrame, useThree, type RootState } from '@react-three/fiber';
 import * as THREE from 'three';
-
-export type ThreeViewEntry = {
-  id: string;
-  track: RefObject<HTMLElement>;
-  element: ReactNode;
-  priority?: number;
-  frames?: number;
-  visible?: boolean;
-  camera?: THREE.Camera;
-};
-
-type ThreeViewRegistryContextValue = {
-  views: ThreeViewEntry[];
-  registerView: (entry: ThreeViewEntry) => void;
-  updateView: (id: string, patch: Partial<ThreeViewEntry>) => void;
-  unregisterView: (id: string) => void;
-};
-
-const ThreeViewRegistryContext =
-  createContext<ThreeViewRegistryContextValue | null>(null);
-
-export function useThreeViewRegistry() {
-  const context = useContext(ThreeViewRegistryContext);
-  if (!context) {
-    throw new Error(
-      'useThreeViewRegistry must be used within ThreeViewRegistryProvider'
-    );
-  }
-  return context;
-}
+import {
+  ThreeViewRegistryContext,
+  useThreeViewRegistry,
+  type ThreeViewEntry,
+} from './three-view-registry-context';
 
 export function ThreeViewRegistryProvider({
   children,
@@ -51,7 +29,7 @@ export function ThreeViewRegistryProvider({
   children: ReactNode;
 }) {
   const [viewMap, setViewMap] = useState<Map<string, ThreeViewEntry>>(
-    () => new Map()
+    () => new Map(),
   );
 
   const registerView = useCallback((entry: ThreeViewEntry) => {
@@ -72,7 +50,7 @@ export function ThreeViewRegistryProvider({
         return next;
       });
     },
-    []
+    [],
   );
 
   const unregisterView = useCallback((id: string) => {
@@ -84,10 +62,7 @@ export function ThreeViewRegistryProvider({
     });
   }, []);
 
-  const views = useMemo(
-    () => Array.from(viewMap.values()),
-    [viewMap]
-  );
+  const views = useMemo(() => Array.from(viewMap.values()), [viewMap]);
 
   return (
     <ThreeViewRegistryContext.Provider
@@ -101,9 +76,7 @@ export function ThreeViewRegistryProvider({
 export function ThreeViewRegistryRenderer() {
   const { views } = useThreeViewRegistry();
   const sortedViews = useMemo(() => {
-    return [...views].sort(
-      (a, b) => (a.priority ?? 0) - (b.priority ?? 0)
-    );
+    return [...views].sort((a, b) => (a.priority ?? 0) - (b.priority ?? 0));
   }, [views]);
 
   return (
@@ -125,7 +98,7 @@ export function ThreeViewRegistryRenderer() {
 }
 
 type TrackedViewProps = {
-  track: RefObject<HTMLElement>;
+  track: RefObject<HTMLElement | null>;
   visible?: boolean;
   index?: number;
   frames?: number;
@@ -134,14 +107,19 @@ type TrackedViewProps = {
 };
 
 const isOrthographicCamera = (
-  camera: THREE.Camera | undefined
+  camera: THREE.Camera | undefined,
 ): camera is THREE.OrthographicCamera =>
-  Boolean(camera && 'isOrthographicCamera' in camera && camera.isOrthographicCamera);
+  Boolean(
+    camera && 'isOrthographicCamera' in camera && camera.isOrthographicCamera,
+  );
 
 const scissorColor = new THREE.Color();
 
-function computeContainerPosition(canvasSize: RootState['size'], trackRect: DOMRect) {
-  const { right, top, left, bottom, width, height } = trackRect;
+function computeContainerPosition(
+  canvasSize: RootState['size'],
+  trackRect: DOMRect,
+) {
+  const { right, top, left, width, height } = trackRect;
   const isOffscreen =
     trackRect.bottom < 0 ||
     top > canvasSize.height ||
@@ -165,9 +143,8 @@ function computeContainerPosition(canvasSize: RootState['size'], trackRect: DOMR
 
 function prepareScissor(
   state: RootState,
-  position: { left: number; bottom: number; width: number; height: number }
+  position: { left: number; bottom: number; width: number; height: number },
 ) {
-  let autoClear: boolean;
   const aspect = position.width / position.height;
   if (isOrthographicCamera(state.camera)) {
     if (!state.camera.manual) {
@@ -192,10 +169,20 @@ function prepareScissor(
     state.camera.aspect = aspect;
     state.camera.updateProjectionMatrix();
   }
-  autoClear = state.gl.autoClear;
+  const autoClear = state.gl.autoClear;
   state.gl.autoClear = false;
-  state.gl.setViewport(position.left, position.bottom, position.width, position.height);
-  state.gl.setScissor(position.left, position.bottom, position.width, position.height);
+  state.gl.setViewport(
+    position.left,
+    position.bottom,
+    position.width,
+    position.height,
+  );
+  state.gl.setScissor(
+    position.left,
+    position.bottom,
+    position.width,
+    position.height,
+  );
   state.gl.setScissorTest(true);
   return autoClear;
 }
@@ -219,7 +206,7 @@ type ViewContainerProps = {
   children?: ReactNode;
   frames: number;
   rect: MutableRefObject<DOMRect | null>;
-  track: RefObject<HTMLElement>;
+  track: RefObject<HTMLElement | null>;
 };
 
 function ViewContainer({
@@ -244,7 +231,7 @@ function ViewContainer({
     if (rect.current) {
       const { position, isOffscreen: offscreen } = computeContainerPosition(
         canvasSize,
-        rect.current
+        rect.current,
       );
       if (isOffscreen !== offscreen) setOffscreen(offscreen);
       if (visible && !offscreen) {
@@ -304,42 +291,40 @@ function TrackedView({
   children,
 }: TrackedViewProps) {
   const rect = useRef<DOMRect | null>(null);
+  const [initialSize] = useState(() => {
+    const r = track.current?.getBoundingClientRect();
+    return {
+      width: r?.width ?? 0,
+      height: r?.height ?? 0,
+      top: r?.top ?? 0,
+      left: r?.left ?? 0,
+    };
+  });
   const { size, scene } = useThree();
   const [virtualScene] = useState(() => new THREE.Scene());
   const [ready, markReady] = useReducer(() => true, false);
-  const compute = useCallback(
-    (event: PointerEvent, state: RootState) => {
-      if (rect.current && track.current && event.target === track.current) {
-        const { width, height, left, top } = rect.current;
-        const x = event.clientX - left;
-        const y = event.clientY - top;
-        state.pointer.set((x / width) * 2 - 1, -(y / height) * 2 + 1);
-        state.raycaster.setFromCamera(state.pointer, state.camera);
-      }
-    },
-    [track]
-  );
-
   useEffect(() => {
     rect.current = track.current?.getBoundingClientRect() ?? null;
     markReady();
   }, [track]);
 
-  const portalState = useMemo(() => {
-    const base = {
-      events: { compute, priority: index },
-      size: {
-        width: rect.current?.width,
-        height: rect.current?.height,
-        top: rect.current?.top,
-        left: rect.current?.left,
-      },
-    };
-    if (camera) {
-      return { ...base, camera };
+  const compute = (event: PointerEvent | MouseEvent | WheelEvent, state: RootState) => {
+    const el = track.current;
+    if (el && event.target === el) {
+      const { width, height, left, top } = el.getBoundingClientRect();
+      const x = event.clientX - left;
+      const y = event.clientY - top;
+      state.pointer.set((x / width) * 2 - 1, -(y / height) * 2 + 1);
+      state.raycaster.setFromCamera(state.pointer, state.camera);
     }
-    return base;
-  }, [camera, compute, index]);
+  };
+  const portalState: Parameters<typeof createPortal>[2] = {
+    events: { compute, priority: index },
+    size: initialSize,
+  };
+  if (camera) {
+    portalState.camera = camera as THREE.PerspectiveCamera;
+  }
 
   return (
     <group>
@@ -357,7 +342,7 @@ function TrackedView({
             {children}
           </ViewContainer>,
           virtualScene,
-          portalState
+          portalState,
         )}
     </group>
   );
