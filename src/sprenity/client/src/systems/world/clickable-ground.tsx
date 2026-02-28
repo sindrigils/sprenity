@@ -1,11 +1,8 @@
+import { useGameStore } from '@core/store/game-store';
+import { useInteractionStore } from '@core/store/interaction-store';
 import { useFrame } from '@react-three/fiber';
 import { useCallback, useRef, useState } from 'react';
 import * as THREE from 'three';
-import { useGameStore } from '@core/store/game-store';
-import {
-  useInteractionLocked,
-  useInteractionStore,
-} from '@core/store/interaction-store';
 
 type GroundClickPulseData = {
   id: number;
@@ -68,17 +65,16 @@ function GroundClickPulse({
 }
 
 export function ClickableGround() {
-  const isLocked = useInteractionLocked();
   const interactionMode = useGameStore((state) => state.interactionMode);
   const selectedAgentId = useGameStore((state) => state.selectedAgentId);
   const moveSelectedAgentTo = useGameStore(
-    (state) => state.moveSelectedAgentTo
+    (state) => state.moveSelectedAgentTo,
   );
   const clearSelectedAgentIds = useGameStore(
-    (state) => state.clearSelectedAgentIds
+    (state) => state.clearSelectedAgentIds,
   );
   const consumeGroundClickSuppression = useInteractionStore(
-    (state) => state.consumeGroundClickSuppression
+    (state) => state.consumeGroundClickSuppression,
   );
   const [pulses, setPulses] = useState<GroundClickPulseData[]>([]);
   const nextPulseIdRef = useRef(0);
@@ -100,7 +96,7 @@ export function ClickableGround() {
     setPulses((prev) => prev.filter((pulse) => pulse.id !== id));
   }, []);
 
-  if (isLocked || interactionMode !== 'normal') return null;
+  if (interactionMode !== 'normal') return null;
 
   return (
     <>
@@ -108,6 +104,11 @@ export function ClickableGround() {
         rotation-x={-Math.PI / 2}
         position-y={0}
         onClick={(e) => {
+          if (useInteractionStore.getState().locked) {
+            e.stopPropagation();
+            return;
+          }
+
           if (consumeGroundClickSuppression(performance.now())) {
             e.stopPropagation();
             return;

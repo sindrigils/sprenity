@@ -1,10 +1,9 @@
 import type { CharacterModel } from '@core/hooks';
 import { useProgress } from '@react-three/drei';
+import { Canvas } from '@react-three/fiber';
 import { IconChevronDown, IconClose } from '@ui/icons';
 import { AgentPreviewScene } from '@ui/previews/agent-preview';
-import { useThreeViewRegistry } from '@ui/three-view-registry-context';
-import { Suspense, useEffect, useId, useMemo, useRef, useState } from 'react';
-import * as THREE from 'three';
+import { Suspense, useState } from 'react';
 
 interface ConfigureAgentModalProps {
   isOpen: boolean;
@@ -51,65 +50,16 @@ export function ConfigureAgentModal({
   const [characterModel, setCharacterModel] = useState<CharacterModel>(
     initialCharacterModel,
   );
-  const previewRef = useRef<HTMLDivElement | null>(null);
-  const closingRef = useRef(false);
   const { active: isLoadingPreview } = useProgress();
-  const viewId = useId();
-  const { registerView, updateView, unregisterView } = useThreeViewRegistry();
-  const previewCamera = useMemo(() => {
-    const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 100);
-    camera.position.set(0, 1, 4.5);
-    camera.lookAt(0, 0.9, 0);
-    return camera;
-  }, []);
-  const previewElement = useMemo(
-    () => (
-      <Suspense fallback={null}>
-        <AgentPreviewScene model={characterModel} camera={previewCamera} />
-      </Suspense>
-    ),
-    [characterModel, previewCamera],
-  );
-  const previewElementRef = useRef(previewElement);
-
-  useEffect(() => {
-    registerView({
-      id: viewId,
-      track: previewRef,
-      element: previewElementRef.current,
-      priority: 2,
-      camera: previewCamera,
-    });
-    return () => unregisterView(viewId);
-  }, [registerView, unregisterView, viewId, previewCamera]);
-
-  useEffect(() => {
-    updateView(viewId, {
-      track: previewRef,
-      element: previewElement,
-      priority: 2,
-      camera: previewCamera,
-    });
-  }, [updateView, viewId, previewElement, previewCamera]);
 
   if (!isOpen) return null;
 
-  const queueClose = (finalize: () => void) => {
-    if (closingRef.current) return;
-    closingRef.current = true;
-    updateView(viewId, { visible: false });
-    requestAnimationFrame(() => {
-      unregisterView(viewId);
-      finalize();
-    });
-  };
-
   const handleClose = () => {
-    queueClose(onClose);
+    onClose();
   };
 
   const handleSave = () => {
-    queueClose(() => onSave({ name, model, characterModel }));
+    onSave({ name, model, characterModel });
   };
 
   return (
@@ -153,7 +103,14 @@ export function ConfigureAgentModal({
         <div className="flex flex-1 overflow-hidden">
           {/* Left Panel - Agent Preview (35%) */}
           <div className="relative w-[35%] border-r border-[#2d2e3d]">
-            <div ref={previewRef} className="h-full w-full" />
+            <Canvas
+              className="h-full w-full"
+              camera={{ fov: 45, position: [0, 1, 4.5], near: 0.1, far: 100 }}
+            >
+              <Suspense fallback={null}>
+                <AgentPreviewScene model={characterModel} />
+              </Suspense>
+            </Canvas>
             {isLoadingPreview && (
               <div className="pointer-events-none absolute inset-0 flex items-center justify-center text-gray-500 text-sm">
                 Loading preview...

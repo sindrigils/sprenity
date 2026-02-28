@@ -1,0 +1,14 @@
+services:
+  postgres:
+    image: postgres:17
+    environment:
+      POSTGRES_USER: sprenity
+      POSTGRES_PASSWORD: sprenity
+      POSTGRES_DB: sprenity
+    ports:
+      - '5432:5432'
+    volumes:
+      - sprenity-pgdata:/var/lib/postgresql/data
+
+volumes:
+  sprenity-pgdata:

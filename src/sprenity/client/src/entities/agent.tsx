@@ -128,12 +128,14 @@ export function Agent({
         ) : null}
         <Html
           position={[0, 3.1, 0]}
+          transform
           center
           sprite
           zIndexRange={[40, 0]}
           style={{ pointerEvents: 'none' }}
         >
           <div
+            data-testid={`agent-name-${id}`}
             style={{
               color: '#7BEA52',
               fontSize: '14px',

@@ -1,4 +1,4 @@
-import { OrbitControls, View } from '@react-three/drei';
+import { OrbitControls } from '@react-three/drei';
 import { Canvas, useThree } from '@react-three/fiber';
 import {
   useCallback,
@@ -12,22 +12,18 @@ import * as THREE from 'three';
 import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib';
 
 import { useGameStore } from '@core/store/game-store';
+import { useInteractionLocked } from '@core/store/interaction-store';
+import { Agent } from '@entities/agent';
+import { BoxSelection } from '@systems/selection/box-selection';
+import { ClickableGround, InfiniteGrid, ZoomClamp } from '@systems/world';
+import { Zones } from '@systems/zones';
+import { ModeToggle, ZoneBuildNotification } from '@ui/controls';
+import { ModalProvider, useModal } from '@ui/modals';
 import {
   setRequiredAgentsForTests,
   setSceneCameraForTests,
   setTrackElementForTests,
 } from './e2e/test-api';
-import { Agent } from '@entities/agent';
-import { BoxSelection } from '@systems/selection/box-selection';
-import { Zones } from '@systems/zones';
-import { ClickableGround, InfiniteGrid, ZoomClamp } from '@systems/world';
-import { useInteractionLocked } from '@core/store/interaction-store';
-import { ModeToggle, ZoneBuildNotification } from '@ui/controls';
-import { ModalProvider, useModal } from '@ui/modals';
-import {
-  ThreeViewRegistryProvider,
-  ThreeViewRegistryRenderer,
-} from '@ui/three-view-registry';
 
 type GameCanvasProps = {
   eventSource: HTMLDivElement | null;
@@ -79,11 +75,7 @@ function GameCanvas({ eventSource, gameTrackRef }: GameCanvasProps) {
       eventSource={eventSource ?? undefined}
       eventPrefix="client"
     >
-      <GameScene
-        controlsRef={controlsRef}
-        gameTrackRef={gameTrackRef}
-      />
-      <ThreeViewRegistryRenderer />
+      <GameScene controlsRef={controlsRef} gameTrackRef={gameTrackRef} />
     </Canvas>
   );
 }
@@ -104,7 +96,7 @@ function GameScene({ controlsRef, gameTrackRef }: GameSceneProps) {
   }, [camera]);
 
   return (
-    <View track={gameTrackRef as RefObject<HTMLElement>}>
+    <>
       <color attach="background" args={['#2A2B38']} />
       <ambientLight intensity={0.5} />
       <directionalLight position={[5, 10, 5]} intensity={1} />
@@ -141,7 +133,7 @@ function GameScene({ controlsRef, gameTrackRef }: GameSceneProps) {
           RIGHT: THREE.MOUSE.PAN,
         }}
       />
-    </View>
+    </>
   );
 }
 
@@ -166,15 +158,13 @@ export default function App() {
       data-testid="app-root"
       className="relative h-full w-full"
     >
-      <ThreeViewRegistryProvider>
-        <ModalProvider
-          onSaveAgentConfig={updateAgentConfig}
-          onSaveZoneProject={updateZone}
-          onDeleteZoneProject={deleteZone}
-        >
-          <GameCanvas eventSource={eventSource} gameTrackRef={gameTrackRef} />
-        </ModalProvider>
-      </ThreeViewRegistryProvider>
+      <ModalProvider
+        onSaveAgentConfig={updateAgentConfig}
+        onSaveZoneProject={updateZone}
+        onDeleteZoneProject={deleteZone}
+      >
+        <GameCanvas eventSource={eventSource} gameTrackRef={gameTrackRef} />
+      </ModalProvider>
       <div
         ref={setGameTrackRef}
         data-testid="game-track"

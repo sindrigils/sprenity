@@ -1,8 +1,5 @@
 import { useGameStore } from '@core/store/game-store';
-import {
-  useInteractionLocked,
-  useInteractionStore,
-} from '@core/store/interaction-store';
+import { useInteractionStore } from '@core/store/interaction-store';
 import { useThree } from '@react-three/fiber';
 import { useEffect, type RefObject } from 'react';
 import * as THREE from 'three';
@@ -27,11 +24,10 @@ type BoxSelectionProps = {
 
 export function BoxSelection({ zIndex = 20, boundsRef }: BoxSelectionProps) {
   const { camera, gl, scene } = useThree();
-  const isLocked = useInteractionLocked();
   const interactionMode = useGameStore((state) => state.interactionMode);
 
   useEffect(() => {
-    if (isLocked || interactionMode !== 'normal') return;
+    if (interactionMode !== 'normal') return;
 
     const selectionBox = new SelectionBox(camera, scene);
     const raycaster = new THREE.Raycaster();
@@ -65,6 +61,7 @@ export function BoxSelection({ zIndex = 20, boundsRef }: BoxSelectionProps) {
     let startY = 0;
 
     const onPointerDown = (event: PointerEvent) => {
+      if (useInteractionStore.getState().locked) return;
       if (event.button !== 0) return;
       if (!isWithinBounds(event)) return;
 
@@ -84,11 +81,12 @@ export function BoxSelection({ zIndex = 20, boundsRef }: BoxSelectionProps) {
       selectionBox.startPoint.set(
         ((event.clientX - rect.left) / rect.width) * 2 - 1,
         -((event.clientY - rect.top) / rect.height) * 2 + 1,
-        0.5
+        0.5,
       );
     };
 
     const onPointerMove = (event: PointerEvent) => {
+      if (useInteractionStore.getState().locked) return;
       if (!isSelecting) return;
 
       const left = Math.min(startX, event.clientX);
@@ -103,6 +101,7 @@ export function BoxSelection({ zIndex = 20, boundsRef }: BoxSelectionProps) {
     };
 
     const onPointerUp = (event: PointerEvent) => {
+      if (useInteractionStore.getState().locked) return;
       if (event.button !== 0 || !isSelecting) return;
 
       isSelecting = false;
@@ -110,7 +109,7 @@ export function BoxSelection({ zIndex = 20, boundsRef }: BoxSelectionProps) {
 
       const dragDistance = Math.hypot(
         event.clientX - startX,
-        event.clientY - startY
+        event.clientY - startY,
       );
       if (dragDistance < BOX_SELECTION_DRAG_THRESHOLD_PX) {
         const rect =
@@ -118,7 +117,7 @@ export function BoxSelection({ zIndex = 20, boundsRef }: BoxSelectionProps) {
           gl.domElement.getBoundingClientRect();
         const ndc = new THREE.Vector2(
           ((event.clientX - rect.left) / rect.width) * 2 - 1,
-          -((event.clientY - rect.top) / rect.height) * 2 + 1
+          -((event.clientY - rect.top) / rect.height) * 2 + 1,
         );
         raycaster.setFromCamera(ndc, camera);
         if (raycaster.ray.intersectPlane(groundPlane, intersection)) {
@@ -141,7 +140,7 @@ export function BoxSelection({ zIndex = 20, boundsRef }: BoxSelectionProps) {
       selectionBox.endPoint.set(
         ((event.clientX - rect.left) / rect.width) * 2 - 1,
         -((event.clientY - rect.top) / rect.height) * 2 + 1,
-        0.5
+        0.5,
       );
 
       const allSelected = selectionBox.select();
@@ -171,7 +170,7 @@ export function BoxSelection({ zIndex = 20, boundsRef }: BoxSelectionProps) {
       document.removeEventListener('pointerup', onPointerUp);
       boxElement.remove();
     };
-  }, [camera, gl, scene, isLocked, interactionMode, zIndex, boundsRef]);
+  }, [camera, gl, scene, interactionMode, zIndex, boundsRef]);
 
   return null;
 }
