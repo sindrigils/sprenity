@@ -8,7 +8,6 @@ requires-python = ">=3.13"
 dependencies = [
     "fastapi>=0.128.0",
     "pydantic>=2.12.5",
-    "pyright>=1.1.408",
     "ruff>=0.14.14",
     "uvicorn>=0.40.0",
 ]
@@ -21,6 +20,7 @@ server = "sprenity.server.main:run"
 dev = [
     "ruff>=0.14.14",
     "pytest>=8.0.0",
+    "ty>=0.0.19",
 ]
 
 [build-system]

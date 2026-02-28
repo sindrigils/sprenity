@@ -291,15 +291,6 @@ function TrackedView({
   children,
 }: TrackedViewProps) {
   const rect = useRef<DOMRect | null>(null);
-  const [initialSize] = useState(() => {
-    const r = track.current?.getBoundingClientRect();
-    return {
-      width: r?.width ?? 0,
-      height: r?.height ?? 0,
-      top: r?.top ?? 0,
-      left: r?.left ?? 0,
-    };
-  });
   const { size, scene } = useThree();
   const [virtualScene] = useState(() => new THREE.Scene());
   const [ready, markReady] = useReducer(() => true, false);
@@ -318,9 +309,19 @@ function TrackedView({
       state.raycaster.setFromCamera(state.pointer, state.camera);
     }
   };
+
+  // Html overlays and pointer math rely on portal size; keep it aligned with the
+  // latest tracked element bounds so labels stay attached after viewport changes.
+  const currentRect = track.current?.getBoundingClientRect();
+  const portalSize = {
+    width: currentRect?.width ?? size.width,
+    height: currentRect?.height ?? size.height,
+    top: currentRect?.top ?? size.top,
+    left: currentRect?.left ?? size.left,
+  };
   const portalState: Parameters<typeof createPortal>[2] = {
     events: { compute, priority: index },
-    size: initialSize,
+    size: portalSize,
   };
   if (camera) {
     portalState.camera = camera as THREE.PerspectiveCamera;
