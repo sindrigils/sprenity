@@ -3,7 +3,7 @@ import type { ApiZone, GridCell } from '@api/zones/requests';
 import { useGameStore } from '@core/store/game-store';
 import { useInteractionLocked } from '@core/store/interaction-store';
 import { useThree } from '@react-three/fiber';
-import { useEffect, useMemo, type RefObject } from 'react';
+import { useEffect, useMemo, useRef, type RefObject } from 'react';
 import * as THREE from 'three';
 import {
   normalizeCells,
@@ -31,7 +31,6 @@ function isInteractiveTarget(target: EventTarget | null): boolean {
 
 export function ZoneBuilder({ boundsRef, zones, zoneCount }: ZoneBuilderProps) {
   const { camera, gl } = useThree();
-  const eventsConnected = useThree((state) => state.events.connected);
   const isLocked = useInteractionLocked();
   const interactionMode = useGameStore((state) => state.interactionMode);
   const setZoneDragStart = useGameStore((state) => state.setZoneDragStart);
@@ -42,7 +41,12 @@ export function ZoneBuilder({ boundsRef, zones, zoneCount }: ZoneBuilderProps) {
     (state) => state.clearActiveHoverCell,
   );
   const clearHoverTrail = useGameStore((state) => state.clearHoverTrail);
-  const createZone = useCreateZone();
+  const createZoneMutation = useCreateZone();
+  const createZoneMutationRef = useRef(createZoneMutation);
+
+  useEffect(() => {
+    createZoneMutationRef.current = createZoneMutation;
+  }, [createZoneMutation]);
 
   const raycaster = useMemo(() => new THREE.Raycaster(), []);
   const ndc = useMemo(() => new THREE.Vector2(), []);
@@ -150,7 +154,7 @@ export function ZoneBuilder({ boundsRef, zones, zoneCount }: ZoneBuilderProps) {
         return;
       }
 
-      createZone.mutate({
+      createZoneMutationRef.current.mutate({
         name: `Project ${zoneCount + 1}`,
         startCell,
         endCell: normalizedEndCell,
@@ -246,15 +250,14 @@ export function ZoneBuilder({ boundsRef, zones, zoneCount }: ZoneBuilderProps) {
       clearHoverTrail();
     };
 
-    const eventTarget = (eventsConnected || gl.domElement) as HTMLElement;
-    eventTarget.addEventListener('pointerdown', onPointerDown);
+    document.addEventListener('pointerdown', onPointerDown);
     document.addEventListener('pointermove', onPointerMove);
     document.addEventListener('pointerup', onPointerUp);
     document.addEventListener('pointercancel', onPointerCancel);
     window.addEventListener('blur', onWindowBlur);
 
     return () => {
-      eventTarget.removeEventListener('pointerdown', onPointerDown);
+      document.removeEventListener('pointerdown', onPointerDown);
       document.removeEventListener('pointermove', onPointerMove);
       document.removeEventListener('pointerup', onPointerUp);
       document.removeEventListener('pointercancel', onPointerCancel);
@@ -268,8 +271,6 @@ export function ZoneBuilder({ boundsRef, zones, zoneCount }: ZoneBuilderProps) {
     clearActiveHoverCell,
     clearHoverTrail,
     clearZoneDrag,
-    createZone,
-    eventsConnected,
     gl,
     groundPlane,
     interactionMode,

@@ -24,6 +24,14 @@ uv sync
 uv run python -m uvicorn app.main:app --reload
 ```
 
+## E2E Bootstrap
+
+Seed an isolated test database with deterministic dummy data:
+
+```bash
+DATABASE_URL=sqlite+aiosqlite:///./.e2e/playwright.db uv run sprenity-e2e-bootstrap
+```
+
 ## Migrations
 
 ```bash

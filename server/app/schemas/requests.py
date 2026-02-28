@@ -1,21 +1,20 @@
-from pydantic import BaseModel
-
+from app.schemas.base import ApiModel
 from app.schemas.domain import CharacterModel, ClaudeModel, GridCell
 
 
-class CreateAgentRequest(BaseModel):
+class CreateAgentRequest(ApiModel):
     name: str
     model: ClaudeModel = ClaudeModel.SONNET
     character_model: CharacterModel = CharacterModel.BARBARIAN
 
 
-class UpdateAgentRequest(BaseModel):
+class UpdateAgentRequest(ApiModel):
     name: str | None = None
     model: ClaudeModel | None = None
     character_model: CharacterModel | None = None
 
 
-class CreateZoneRequest(BaseModel):
+class CreateZoneRequest(ApiModel):
     name: str
     start_cell: GridCell
     end_cell: GridCell
@@ -23,7 +22,7 @@ class CreateZoneRequest(BaseModel):
     project_path: str | None = None
 
 
-class UpdateZoneRequest(BaseModel):
+class UpdateZoneRequest(ApiModel):
     name: str | None = None
     start_cell: GridCell | None = None
     end_cell: GridCell | None = None
@@ -31,10 +30,10 @@ class UpdateZoneRequest(BaseModel):
     project_path: str | None = None
 
 
-class AssignAgentRequest(BaseModel):
+class AssignAgentRequest(ApiModel):
     agent_id: str
     zone_id: str
 
 
-class SendKeysRequest(BaseModel):
+class SendKeysRequest(ApiModel):
     keys: str
