@@ -1,8 +1,10 @@
 import asyncio
 import os
+import select
 import signal
 import struct
 import termios
+import threading
 from contextlib import suppress
 from pathlib import Path
 
@@ -70,7 +72,7 @@ async def delete_agent(agent_id: str, db: DBDependency, tmux: TmuxDependency) ->
         raise HTTPException(status_code=404, detail="Agent not found")
 
     for session in await sessions_repo.get_sessions_for_agent(db, agent_id):
-        tmux.kill_session(session.tmux_session_name)
+        await tmux.kill_session(session.tmux_session_name)
         await sessions_repo.delete_session(db, session.id)
 
     await agents_repo.delete_agent(db, agent_id)
@@ -86,10 +88,10 @@ async def open_agent_terminal(
         raise HTTPException(status_code=404, detail="Agent not found")
 
     session_name = _dev_session_name(agent_id)
-    if tmux.session_exists(session_name):
-        tmux.kill_session(session_name)
+    if await tmux.session_exists(session_name):
+        await tmux.kill_session(session_name)
 
-    tmux.create_session(
+    await tmux.create_session(
         session_name=session_name,
         working_dir=str(Path.cwd()),
     )
@@ -108,7 +110,7 @@ async def stream_agent_terminal(
         return
 
     session_name = _dev_session_name(agent_id)
-    if not tmux.session_exists(session_name):
+    if not await tmux.session_exists(session_name):
         await websocket.close(code=4404, reason="Terminal session not found")
         return
 
@@ -150,18 +152,35 @@ async def stream_agent_terminal(
 
             fcntl.ioctl(master_fd, fcntl_request, packed)
 
+    shutdown = threading.Event()
     write_lock = asyncio.Lock()
 
     async def write_pty(data: str) -> None:
-        if not data:
+        if not data or shutdown.is_set():
             return
         payload = data.encode("utf-8", errors="replace")
         async with write_lock:
-            await asyncio.to_thread(os.write, master_fd, payload)
+            try:
+                await asyncio.to_thread(os.write, master_fd, payload)
+            except OSError:
+                return
+
+    def _blocking_read() -> bytes:
+        while not shutdown.is_set():
+            try:
+                readable, _, _ = select.select([master_fd], [], [], 0.5)
+            except (OSError, ValueError):
+                return b""
+            if readable:
+                try:
+                    return os.read(master_fd, 4096)
+                except OSError:
+                    return b""
+        return b""
 
     async def read_pty_output() -> None:
-        while True:
-            chunk = await asyncio.to_thread(os.read, master_fd, 4096)
+        while not shutdown.is_set():
+            chunk = await asyncio.to_thread(_blocking_read)
             if not chunk:
                 break
             await websocket.send_json(
@@ -197,33 +216,44 @@ async def stream_agent_terminal(
     output_task = asyncio.create_task(read_pty_output())
     input_task = asyncio.create_task(read_client_input())
     try:
-        done, pending = await asyncio.wait(
+        done, _pending = await asyncio.wait(
             {output_task, input_task},
             return_when=asyncio.FIRST_COMPLETED,
         )
-        for task in pending:
-            task.cancel()
-        for task in pending:
-            with suppress(asyncio.CancelledError):
-                await task
         for task in done:
-            with suppress(WebSocketDisconnect, asyncio.CancelledError):
+            with suppress(WebSocketDisconnect, asyncio.CancelledError, OSError):
                 task.result()
     except WebSocketDisconnect:
         pass
     finally:
-        with suppress(Exception):
-            os.close(master_fd)
+        shutdown.set()
+
         if process.returncode is None:
             with suppress(ProcessLookupError):
                 process.terminate()
-            with suppress(asyncio.TimeoutError):
-                await asyncio.wait_for(process.wait(), timeout=0.25)
-            if process.returncode is None:
+            try:
+                await asyncio.wait_for(process.wait(), timeout=2)
+            except TimeoutError:
                 with suppress(ProcessLookupError):
                     process.kill()
-                with suppress(Exception):
-                    await process.wait()
+                with suppress(TimeoutError):
+                    await asyncio.wait_for(process.wait(), timeout=2)
+
+        if not input_task.done():
+            input_task.cancel()
+            with suppress(asyncio.CancelledError):
+                await input_task
+
+        if not output_task.done():
+            try:
+                await asyncio.wait_for(asyncio.shield(output_task), timeout=3)
+            except (TimeoutError, asyncio.CancelledError):
+                output_task.cancel()
+                with suppress(asyncio.CancelledError):
+                    await output_task
+
+        with suppress(OSError):
+            os.close(master_fd)
 
 
 @router.delete("/{agent_id}/terminal", status_code=204)
@@ -236,5 +266,5 @@ async def close_agent_terminal(
         raise HTTPException(status_code=404, detail="Agent not found")
 
     session_name = _dev_session_name(agent_id)
-    if tmux.session_exists(session_name):
-        tmux.kill_session(session_name)
+    if await tmux.session_exists(session_name):
+        await tmux.kill_session(session_name)

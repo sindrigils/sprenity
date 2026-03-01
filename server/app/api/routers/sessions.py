@@ -42,7 +42,7 @@ async def create_session(
     session.tmux_session_name = f"sprenity-{session.id}"
 
     command = f"claude --model {agent.model}"
-    tmux.create_session(session.tmux_session_name, zone.project_path, command)
+    await tmux.create_session(session.tmux_session_name, zone.project_path, command)
 
     return await sessions_repo.add_session(db, session)
 
@@ -55,7 +55,7 @@ async def get_session(
     if not session:
         raise HTTPException(status_code=404, detail="Session not found")
 
-    if session.status == SessionStatus.RUNNING and not tmux.session_exists(
+    if session.status == SessionStatus.RUNNING and not await tmux.session_exists(
         session.tmux_session_name
     ):
         await sessions_repo.update_session(db, session_id, status=SessionStatus.STOPPED)
@@ -76,7 +76,7 @@ async def get_session_output(
     if not session:
         raise HTTPException(status_code=404, detail="Session not found")
 
-    return {"output": tmux.capture_output(session.tmux_session_name)}
+    return {"output": await tmux.capture_output(session.tmux_session_name)}
 
 
 @router.post("/{session_id}/send", status_code=204)
@@ -93,7 +93,7 @@ async def send_keys(
     if session.status != SessionStatus.RUNNING:
         raise HTTPException(status_code=400, detail="Session is not running")
 
-    tmux.send_keys(session.tmux_session_name, body.keys)
+    await tmux.send_keys(session.tmux_session_name, body.keys)
 
 
 @router.delete("/{session_id}", status_code=204)
@@ -106,5 +106,5 @@ async def delete_session(
     if not session:
         raise HTTPException(status_code=404, detail="Session not found")
 
-    tmux.kill_session(session.tmux_session_name)
+    await tmux.kill_session(session.tmux_session_name)
     await sessions_repo.delete_session(db, session_id)

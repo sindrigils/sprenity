@@ -52,7 +52,7 @@ async def delete_zone(zone_id: str, db: DBDependency, tmux: TmuxDependency) -> N
         raise HTTPException(status_code=404, detail="Zone not found")
 
     for session in await sessions_repo.get_sessions_for_zone(db, zone_id):
-        tmux.kill_session(session.tmux_session_name)
+        await tmux.kill_session(session.tmux_session_name)
         await sessions_repo.delete_session(db, session.id)
 
     await zones_repo.delete_zone(db, zone_id)
