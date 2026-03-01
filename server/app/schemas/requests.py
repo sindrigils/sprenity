@@ -1,5 +1,4 @@
-from pydantic import BaseModel
-
+from app.schemas.base import BaseModel
 from app.schemas.domain import CharacterModel, ClaudeModel, GridCell
 
 

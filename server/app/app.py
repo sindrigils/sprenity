@@ -6,7 +6,6 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.routers import agents, e2e, sessions, zones
 from app.core.config import Settings, get_settings
-from app.core.middleware import CamelSnakeMiddleware
 from app.db import Database
 from app.services.tmux import TmuxService
 
@@ -27,7 +26,6 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     app = FastAPI(title=cfg.app_name, lifespan=lifespan)
 
-    app.add_middleware(CamelSnakeMiddleware)  # ty: ignore
     app.add_middleware(
         CORSMiddleware,  # ty: ignore
         allow_origins=cfg.cors_origins,

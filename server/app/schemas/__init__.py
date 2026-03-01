@@ -1,3 +1,4 @@
+from app.schemas.base import BaseModel
 from app.schemas.domain import (
     Agent,
     CharacterModel,
@@ -19,6 +20,7 @@ from app.schemas.requests import (
 __all__ = [
     "Agent",
     "AssignAgentRequest",
+    "BaseModel",
     "CharacterModel",
     "ClaudeModel",
     "CreateAgentRequest",

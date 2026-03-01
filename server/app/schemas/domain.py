@@ -1,7 +1,9 @@
 from enum import StrEnum
 from uuid import uuid4
 
-from pydantic import BaseModel, Field
+from pydantic import Field
+
+from app.schemas.base import BaseModel
 
 
 class ClaudeModel(StrEnum):
