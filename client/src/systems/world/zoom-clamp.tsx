@@ -1,11 +1,11 @@
+import { useInteractionLocked } from '@core/store/interaction-store';
 import { useFrame, useThree } from '@react-three/fiber';
-import { useMemo, type MutableRefObject } from 'react';
+import { useMemo, type RefObject } from 'react';
 import * as THREE from 'three';
 import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib';
-import { useInteractionLocked } from '@core/store/interaction-store';
 
 type ZoomClampProps = {
-  controlsRef: MutableRefObject<OrbitControlsImpl | null>;
+  controlsRef: RefObject<OrbitControlsImpl | null>;
   baseMinZoom?: number;
   safety?: number;
 };

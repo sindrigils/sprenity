@@ -29,6 +29,10 @@ export type UpdateAgentBody = {
   characterModel?: CharacterModel;
 };
 
+export type OpenAgentTerminalResponse = {
+  sessionName: string;
+};
+
 export async function fetchAgents() {
   const { data } = await api.get<ApiAgent[]>('/agents');
   return data;
@@ -51,4 +55,15 @@ export async function updateAgent(id: string, body: UpdateAgentBody) {
 
 export async function deleteAgent(id: string) {
   await api.delete(`/agents/${id}`);
+}
+
+export async function openAgentTerminal(id: string) {
+  const { data } = await api.post<{ session_name: string }>(
+    `/agents/${id}/terminal/open`,
+  );
+  return { sessionName: data.session_name };
+}
+
+export async function closeAgentTerminal(id: string) {
+  await api.delete(`/agents/${id}/terminal`);
 }

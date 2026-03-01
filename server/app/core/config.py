@@ -14,7 +14,7 @@ class Settings(BaseSettings):
         validation_alias=AliasChoices("DATABASE_URL", "SPRENITY_DATABASE_URL"),
     )
     tmux_bin: str = Field(
-        default="/opt/homebrew/bin/tmux",
+        default="tmux",
         validation_alias=AliasChoices("TMUX_BIN", "SPRENITY_TMUX_BIN"),
     )
 

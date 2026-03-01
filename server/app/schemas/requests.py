@@ -1,20 +1,20 @@
-from app.schemas.base import ApiModel
+from app.schemas.base import BaseModel
 from app.schemas.domain import CharacterModel, ClaudeModel, GridCell
 
 
-class CreateAgentRequest(ApiModel):
+class CreateAgentRequest(BaseModel):
     name: str
     model: ClaudeModel = ClaudeModel.SONNET
     character_model: CharacterModel = CharacterModel.BARBARIAN
 
 
-class UpdateAgentRequest(ApiModel):
+class UpdateAgentRequest(BaseModel):
     name: str | None = None
     model: ClaudeModel | None = None
     character_model: CharacterModel | None = None
 
 
-class CreateZoneRequest(ApiModel):
+class CreateZoneRequest(BaseModel):
     name: str
     start_cell: GridCell
     end_cell: GridCell
@@ -22,7 +22,7 @@ class CreateZoneRequest(ApiModel):
     project_path: str | None = None
 
 
-class UpdateZoneRequest(ApiModel):
+class UpdateZoneRequest(BaseModel):
     name: str | None = None
     start_cell: GridCell | None = None
     end_cell: GridCell | None = None
@@ -30,10 +30,10 @@ class UpdateZoneRequest(ApiModel):
     project_path: str | None = None
 
 
-class AssignAgentRequest(ApiModel):
+class AssignAgentRequest(BaseModel):
     agent_id: str
     zone_id: str
 
 
-class SendKeysRequest(ApiModel):
+class SendKeysRequest(BaseModel):
     keys: str

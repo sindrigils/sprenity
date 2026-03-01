@@ -1,10 +1,13 @@
+import type { ClaudeModel } from '@api/agents/requests';
+import type { CharacterModel } from '@core/hooks';
+import { useInteractionStore } from '@core/store/interaction-store';
 import {
   createContext,
   useCallback,
   useContext,
+  useEffect,
   useState,
   type ReactNode,
-  useEffect,
 } from 'react';
 import { ConfigureAgentModal } from './configure-agent';
 import {
@@ -12,15 +15,13 @@ import {
   type EditZoneProjectModalData,
   type EditZoneProjectModalSize,
 } from './edit-zone-project';
-import type { CharacterModel } from '@core/hooks';
-import { useInteractionStore } from '@core/store/interaction-store';
 
 export type ModalType = 'configure-agent' | 'edit-zone-project';
 
 export interface ConfigureAgentData {
   agentId: string;
   name: string;
-  model: string;
+  model: ClaudeModel;
   characterModel: CharacterModel;
 }
 
@@ -59,7 +60,7 @@ interface ModalProviderProps {
   children: ReactNode;
   onSaveAgentConfig?: (
     agentId: string,
-    data: { name: string; model: string; characterModel: CharacterModel }
+    data: { name: string; model: ClaudeModel; characterModel: CharacterModel },
   ) => void;
   onSaveZoneProject?: (zoneId: string, data: EditZoneProjectModalData) => void;
   onDeleteZoneProject?: (zoneId: string) => void;
@@ -80,7 +81,7 @@ export function ModalProvider({
       setModalData(data);
       setActiveModal(type);
     },
-    []
+    [],
   );
 
   const closeModal = useCallback(() => {
@@ -113,13 +114,15 @@ export function ModalProvider({
           onSave={(data) => {
             onSaveAgentConfig?.(
               (modalData as ConfigureAgentData).agentId,
-              data
+              data,
             );
             closeModal();
           }}
           initialName={(modalData as ConfigureAgentData).name}
           initialModel={(modalData as ConfigureAgentData).model}
-          initialCharacterModel={(modalData as ConfigureAgentData).characterModel}
+          initialCharacterModel={
+            (modalData as ConfigureAgentData).characterModel
+          }
         />
       )}
       {activeModal === 'edit-zone-project' && modalData && (
@@ -128,7 +131,10 @@ export function ModalProvider({
           isOpen={true}
           onClose={closeModal}
           onDone={(data) => {
-            onSaveZoneProject?.((modalData as EditZoneProjectData).zoneId, data);
+            onSaveZoneProject?.(
+              (modalData as EditZoneProjectData).zoneId,
+              data,
+            );
             closeModal();
           }}
           onDelete={() => {

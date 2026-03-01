@@ -4,12 +4,12 @@ on:
   push:
     branches: [main]
     paths:
-      - 'src/sprenity/server/**'
+      - 'server/**'
       - '.github/workflows/backend.yml'
   pull_request:
     branches: [main]
     paths:
-      - 'src/sprenity/server/**'
+      - 'server/**'
       - '.github/workflows/backend.yml'
 
 concurrency:
@@ -18,7 +18,7 @@ concurrency:
 
 defaults:
   run:
-    working-directory: src/sprenity/server
+    working-directory: server
 
 jobs:
   check:
@@ -33,7 +33,7 @@ jobs:
         uses: astral-sh/setup-uv@v5
         with:
           enable-cache: true
-          cache-dependency-glob: 'src/sprenity/server/uv.lock'
+          cache-dependency-glob: 'server/uv.lock'
 
       - name: Setup Python
         run: uv python install 3.13
