@@ -1,26 +1,29 @@
-import { OrbitControls } from '@react-three/drei';
+import { OrbitControls, View } from '@react-three/drei';
 import { Canvas, useThree } from '@react-three/fiber';
 import {
   useCallback,
   useEffect,
   useRef,
   useState,
-  type MutableRefObject,
   type RefObject,
 } from 'react';
 import * as THREE from 'three';
 import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib';
 
-import { useAgents } from '@api/agents/hooks';
-import { useUpdateAgent } from '@api/agents/hooks';
+import { useAgents, useUpdateAgent } from '@api/agents/hooks';
 import { useDeleteZone, useUpdateZone } from '@api/zones/hooks';
 import { useGameStore } from '@core/store/game-store';
 import { useInteractionLocked } from '@core/store/interaction-store';
+import { useTerminalStore } from '@core/store/terminal-store';
 import { Agent } from '@entities/agent';
 import { BoxSelection } from '@systems/selection/box-selection';
 import { ClickableGround, InfiniteGrid, ZoomClamp } from '@systems/world';
 import { Zones } from '@systems/zones';
-import { ModeToggle, ZoneBuildNotification } from '@ui/controls';
+import {
+  AgentTerminalSidebar,
+  ModeToggle,
+  ZoneBuildNotification,
+} from '@ui/controls';
 import { ModalProvider, useModal } from '@ui/modals';
 import {
   setRequiredAgentsForTests,
@@ -31,9 +34,14 @@ import {
 type GameCanvasProps = {
   eventSource: HTMLDivElement | null;
   gameTrackRef: RefObject<HTMLDivElement | null>;
+  labelLayoutVersion: number;
 };
 
-function GameCanvas({ eventSource, gameTrackRef }: GameCanvasProps) {
+function GameCanvas({
+  eventSource,
+  gameTrackRef,
+  labelLayoutVersion,
+}: GameCanvasProps) {
   const controlsRef = useRef<OrbitControlsImpl | null>(null);
   const { openModal } = useModal();
   const isLocked = useInteractionLocked();
@@ -71,23 +79,37 @@ function GameCanvas({ eventSource, gameTrackRef }: GameCanvasProps) {
 
   return (
     <Canvas
+      className="absolute inset-0"
       data-testid="game-canvas"
+      frameloop="always"
       orthographic
       camera={{ zoom: 64, position: [20, 20, 20], near: 0.1, far: 5000 }}
       eventSource={eventSource ?? undefined}
       eventPrefix="client"
     >
-      <GameScene controlsRef={controlsRef} gameTrackRef={gameTrackRef} />
+      <View track={gameTrackRef as RefObject<HTMLElement>}>
+        <GameScene
+          controlsRef={controlsRef}
+          gameTrackRef={gameTrackRef}
+          labelLayoutVersion={labelLayoutVersion}
+        />
+      </View>
+      <View.Port />
     </Canvas>
   );
 }
 
 type GameSceneProps = {
-  controlsRef: MutableRefObject<OrbitControlsImpl | null>;
+  controlsRef: RefObject<OrbitControlsImpl | null>;
   gameTrackRef: RefObject<HTMLDivElement | null>;
+  labelLayoutVersion: number;
 };
 
-function GameScene({ controlsRef, gameTrackRef }: GameSceneProps) {
+function GameScene({
+  controlsRef,
+  gameTrackRef,
+  labelLayoutVersion,
+}: GameSceneProps) {
   const camera = useThree((state) => state.camera);
   const eventsConnected = useThree((state) => state.events.connected);
   const isLocked = useInteractionLocked();
@@ -114,6 +136,8 @@ function GameScene({ controlsRef, gameTrackRef }: GameSceneProps) {
           name={agent.name}
           characterModel={agent.characterModel}
           position={[0, 0, 0]}
+          labelPortalRef={gameTrackRef}
+          labelLayoutVersion={labelLayoutVersion}
         />
       ))}
       <InfiniteGrid />
@@ -145,19 +169,45 @@ export default function App() {
   const updateAgentMutation = useUpdateAgent();
   const updateZoneMutation = useUpdateZone();
   const deleteZoneMutation = useDeleteZone();
+  const hasActiveTerminal = useTerminalStore(
+    (state) => state.activeAgentId !== null && state.activeAgentName !== null,
+  );
+  const [labelLayoutVersion, setLabelLayoutVersion] = useState(0);
   const [eventSource, setEventSource] = useState<HTMLDivElement | null>(null);
+  const [trackElement, setTrackElement] = useState<HTMLDivElement | null>(null);
   const gameTrackRef = useRef<HTMLDivElement>(null);
   const setGameTrackRef = useCallback((element: HTMLDivElement | null) => {
     gameTrackRef.current = element;
+    setTrackElement(element);
     setTrackElementForTests(element);
   }, []);
 
+  useEffect(() => {
+    if (!trackElement) return;
+
+    let previousWidth = Math.round(trackElement.getBoundingClientRect().width);
+    let previousHeight = Math.round(
+      trackElement.getBoundingClientRect().height,
+    );
+    const observer = new ResizeObserver((entries) => {
+      const entry = entries[0];
+      if (!entry) return;
+
+      const width = Math.round(entry.contentRect.width);
+      const height = Math.round(entry.contentRect.height);
+      if (width === previousWidth && height === previousHeight) return;
+
+      previousWidth = width;
+      previousHeight = height;
+      setLabelLayoutVersion((version) => version + 1);
+    });
+
+    observer.observe(trackElement);
+    return () => observer.disconnect();
+  }, [trackElement]);
+
   return (
-    <div
-      ref={setEventSource}
-      data-testid="app-root"
-      className="relative h-full w-full"
-    >
+    <div data-testid="app-root" className="h-full w-full">
       <ModalProvider
         onSaveAgentConfig={(agentId, data) => {
           updateAgentMutation.mutate({ id: agentId, body: data });
@@ -169,15 +219,30 @@ export default function App() {
           deleteZoneMutation.mutate(zoneId);
         }}
       >
-        <GameCanvas eventSource={eventSource} gameTrackRef={gameTrackRef} />
+        <div
+          ref={setEventSource}
+          className="relative h-full w-full overflow-hidden"
+        >
+          <GameCanvas
+            eventSource={eventSource}
+            gameTrackRef={gameTrackRef}
+            labelLayoutVersion={labelLayoutVersion}
+          />
+          <div
+            className="absolute inset-y-0 left-0 z-10 transition-[right] duration-[220ms] ease-out"
+            style={{ right: hasActiveTerminal ? 520 : 0 }}
+          >
+            <div
+              ref={setGameTrackRef}
+              data-testid="game-track"
+              className="absolute inset-0"
+            />
+            <ZoneBuildNotification />
+            <ModeToggle />
+          </div>
+          <AgentTerminalSidebar isOpen={hasActiveTerminal} />
+        </div>
       </ModalProvider>
-      <div
-        ref={setGameTrackRef}
-        data-testid="game-track"
-        className="absolute inset-0 z-10"
-      />
-      <ZoneBuildNotification />
-      <ModeToggle />
     </div>
   );
 }

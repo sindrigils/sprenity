@@ -1,16 +1,20 @@
-import { Html } from '@react-three/drei';
-import { useFrame } from '@react-three/fiber';
-import { useEffect, useRef } from 'react';
-import * as THREE from 'three';
 import type { CharacterModel } from '@api/agents/requests';
 import { useAnimations, useCharacterModel, useClonedModel } from '@core/hooks';
 import { useGameStore } from '@core/store/game-store';
+import { useInteractionStore } from '@core/store/interaction-store';
+import { useTerminalStore } from '@core/store/terminal-store';
+import { Html } from '@react-three/drei';
+import { useFrame } from '@react-three/fiber';
+import { useEffect, useRef, type RefObject } from 'react';
+import * as THREE from 'three';
 
 type AgentProps = {
   id: string;
   name: string;
   characterModel: CharacterModel;
   position: [number, number, number];
+  labelPortalRef?: RefObject<HTMLElement | null>;
+  labelLayoutVersion?: number;
 };
 
 export function Agent({
@@ -18,10 +22,13 @@ export function Agent({
   name,
   characterModel,
   position = [0, 0, 0],
+  labelPortalRef,
+  labelLayoutVersion = 0,
 }: AgentProps) {
   const mixerRef = useRef<THREE.AnimationMixer | null>(null);
   const nameTagRef = useRef<THREE.Group>(null);
   const isSelected = useGameStore((state) => state.selectedAgentId.has(id));
+  const openTerminalSidebar = useTerminalStore((state) => state.openTerminal);
 
   const registerAgent = useGameStore((state) => state.registerAgent);
   const unregisterAgent = useGameStore((state) => state.unregisterAgent);
@@ -34,6 +41,11 @@ export function Agent({
   const targetPosition = useGameStore(
     (state) => state.agentsMap.get(id)?.targetPosition,
   );
+
+  const openTerminal = () => {
+    if (useInteractionStore.getState().locked) return;
+    openTerminalSidebar(id, name);
+  };
 
   useEffect(() => {
     const mixer = new THREE.AnimationMixer(clonedScene);
@@ -103,7 +115,16 @@ export function Agent({
 
   return (
     <>
-      <primitive object={clonedScene} />
+      <primitive
+        object={clonedScene}
+        onPointerDown={(event: { stopPropagation(): void }) =>
+          event.stopPropagation()
+        }
+        onClick={(event: { stopPropagation(): void }) => {
+          event.stopPropagation();
+          openTerminal();
+        }}
+      />
       <group ref={nameTagRef} position={position}>
         {isSelected ? (
           <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.02, 0]}>
@@ -118,10 +139,10 @@ export function Agent({
           </mesh>
         ) : null}
         <Html
+          key={`${id}-label-${labelLayoutVersion}`}
           position={[0, 3.1, 0]}
-          transform
           center
-          sprite
+          portal={labelPortalRef as RefObject<HTMLElement> | undefined}
           zIndexRange={[40, 0]}
           style={{ pointerEvents: 'none' }}
         >

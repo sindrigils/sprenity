@@ -1,9 +1,7 @@
 from enum import StrEnum
 from uuid import uuid4
 
-from pydantic import Field
-
-from app.schemas.base import ApiModel
+from pydantic import BaseModel, Field
 
 
 class ClaudeModel(StrEnum):
@@ -27,19 +25,19 @@ class SessionStatus(StrEnum):
     ERROR = "error"
 
 
-class GridCell(ApiModel):
+class GridCell(BaseModel):
     x: int
     z: int
 
 
-class Agent(ApiModel):
+class Agent(BaseModel):
     id: str = Field(default_factory=lambda: uuid4().hex[:8])
     name: str
     model: ClaudeModel = ClaudeModel.SONNET
     character_model: CharacterModel = CharacterModel.BARBARIAN
 
 
-class Zone(ApiModel):
+class Zone(BaseModel):
     id: str = Field(default_factory=lambda: uuid4().hex[:8])
     name: str
     start_cell: GridCell
@@ -48,7 +46,7 @@ class Zone(ApiModel):
     project_path: str | None = None
 
 
-class Session(ApiModel):
+class Session(BaseModel):
     id: str = Field(default_factory=lambda: uuid4().hex[:8])
     agent_id: str
     zone_id: str

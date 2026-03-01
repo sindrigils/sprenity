@@ -55,7 +55,9 @@ const testApi: SprenityTestApi = {
       id: agent.id,
       name: agent.id,
       position: toVector3Like(agent.object.position),
-      targetPosition: agent.targetPosition ? toVector3Like(agent.targetPosition) : null,
+      targetPosition: agent.targetPosition
+        ? toVector3Like(agent.targetPosition)
+        : null,
     }));
   },
 
@@ -73,8 +75,14 @@ const testApi: SprenityTestApi = {
     if (rect.width <= 0 || rect.height <= 0) return null;
 
     sceneCamera.updateMatrixWorld();
+    if (
+      'updateProjectionMatrix' in sceneCamera &&
+      typeof sceneCamera.updateProjectionMatrix === 'function'
+    ) {
+      sceneCamera.updateProjectionMatrix();
+    }
     const projected = new THREE.Vector3(world.x, world.y, world.z).project(
-      sceneCamera
+      sceneCamera,
     );
 
     if (

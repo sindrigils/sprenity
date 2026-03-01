@@ -1,3 +1,4 @@
+import type { ClaudeModel } from '@api/agents/requests';
 import type { CharacterModel } from '@core/hooks';
 import { useProgress } from '@react-three/drei';
 import { Canvas } from '@react-three/fiber';
@@ -10,15 +11,15 @@ interface ConfigureAgentModalProps {
   onClose: () => void;
   onSave: (data: {
     name: string;
-    model: string;
+    model: ClaudeModel;
     characterModel: CharacterModel;
   }) => void;
   initialName?: string;
-  initialModel?: string;
+  initialModel?: ClaudeModel;
   initialCharacterModel?: CharacterModel;
 }
 
-const modelOptions = [
+const modelOptions: { value: ClaudeModel; label: string }[] = [
   { value: 'claude-sonnet', label: 'Claude Sonnet' },
   { value: 'claude-opus', label: 'Claude Opus' },
   { value: 'claude-haiku', label: 'Claude Haiku' },
@@ -147,7 +148,9 @@ export function ConfigureAgentModal({
                     <div className="relative">
                       <select
                         value={model}
-                        onChange={(e) => setModel(e.target.value)}
+                        onChange={(e) =>
+                          setModel(e.target.value as ClaudeModel)
+                        }
                         data-testid="configure-agent-model-select"
                         className="w-full px-4 py-3 pr-10 bg-[#1c1d2b] border border-[#2a2b3d] rounded-lg text-white focus:outline-none focus:border-green-400 focus:ring-2 focus:ring-green-400/30 cursor-pointer appearance-none"
                       >

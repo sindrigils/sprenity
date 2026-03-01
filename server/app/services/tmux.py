@@ -12,18 +12,26 @@ class TmuxService:
         )
         return result.returncode == 0
 
-    def create_session(self, session_name: str, working_dir: str, command: str) -> None:
+    def create_session(
+        self,
+        session_name: str,
+        working_dir: str,
+        command: str | None = None,
+    ) -> None:
+        cmd = [
+            self.tmux_bin,
+            "new-session",
+            "-d",
+            "-s",
+            session_name,
+            "-c",
+            working_dir,
+        ]
+        if command:
+            cmd.append(command)
+
         subprocess.run(
-            [
-                self.tmux_bin,
-                "new-session",
-                "-d",
-                "-s",
-                session_name,
-                "-c",
-                working_dir,
-                command,
-            ],
+            cmd,
             check=True,
             capture_output=True,
         )
@@ -34,25 +42,40 @@ class TmuxService:
             capture_output=True,
         )
 
-    def capture_output(self, session_name: str, lines: int = 50) -> str:
+    def capture_output(
+        self,
+        session_name: str,
+        lines: int | None = 50,
+        *,
+        preserve_trailing: bool = False,
+    ) -> str:
+        cmd = [
+            self.tmux_bin,
+            "capture-pane",
+            "-t",
+            session_name,
+            "-p",
+        ]
+        if preserve_trailing:
+            cmd.append("-N")
+        if lines is not None:
+            cmd.extend(["-S", str(-lines)])
+
         result = subprocess.run(
-            [
-                self.tmux_bin,
-                "capture-pane",
-                "-t",
-                session_name,
-                "-p",
-                "-S",
-                str(-lines),
-            ],
+            cmd,
             capture_output=True,
             text=True,
         )
         return result.stdout if result.returncode == 0 else ""
 
-    def send_keys(self, session_name: str, keys: str) -> None:
+    def send_keys(self, session_name: str, keys: str, *, literal: bool = False) -> None:
+        cmd = [self.tmux_bin, "send-keys", "-t", session_name]
+        if literal:
+            cmd.append("-l")
+        cmd.append(keys)
+
         subprocess.run(
-            [self.tmux_bin, "send-keys", "-t", session_name, keys],
+            cmd,
             check=True,
             capture_output=True,
         )
